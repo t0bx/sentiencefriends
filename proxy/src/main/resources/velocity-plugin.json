@@ -1,0 +1,9 @@
+{
+  "id": "sentiencefriends-velocity",
+  "name": "SentienceFriends-Velocity",
+  "version": "1.0.0",
+  "authors": [
+    "t0bx"
+  ],
+  "main": "de.t0bx.sentiencefriends.proxy.ProxyPlugin"
+}

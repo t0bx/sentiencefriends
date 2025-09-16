@@ -1,0 +1,6 @@
+name: SentienceFriends-Lobby
+version: 1.0
+main: de.t0bx.sentiencefriends.lobby.LobbyPlugin
+author: t0bx
+api-version: "1.21"
+commands:
