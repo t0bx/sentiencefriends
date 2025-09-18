@@ -32,6 +32,7 @@ public class FriendsManager {
             final String query = """
                     SELECT 'friend' AS dataset,
                            uuid_friend AS id,
+                           cached_name AS cached_name,
                            since,
                            last_online,
                            favorite,
@@ -87,6 +88,7 @@ public class FriendsManager {
                             case "friend" -> {
                                 FriendsData.Friend friend = new FriendsData.Friend(
                                         UUID.fromString(resultSet.getString("id")),
+                                        resultSet.getString("cached_name"),
                                         resultSet.getLong("since")
                                 );
 

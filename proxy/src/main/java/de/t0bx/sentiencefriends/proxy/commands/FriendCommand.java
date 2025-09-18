@@ -3,6 +3,8 @@ package de.t0bx.sentiencefriends.proxy.commands;
 import com.velocitypowered.api.command.SimpleCommand;
 import com.velocitypowered.api.proxy.Player;
 import com.velocitypowered.api.proxy.ProxyServer;
+import com.velocitypowered.api.proxy.ServerConnection;
+import com.velocitypowered.api.proxy.server.RegisteredServer;
 import de.t0bx.sentiencefriends.proxy.ProxyPlugin;
 import de.t0bx.sentiencefriends.proxy.friends.FriendsData;
 import de.t0bx.sentiencefriends.proxy.friends.FriendsManager;
@@ -77,11 +79,21 @@ public class FriendCommand implements SimpleCommand {
             }
 
             case "jump" -> {
+                if (args.length != 2) {
+                    player.sendMessage(this.miniMessage.deserialize(this.prefix + "Usage: /friend jump <Name> <dark_gray>| <gray>Jump to a friend"));
+                    return;
+                }
 
+                this.handleJump(player, args[1]);
             }
 
             case "list" -> {
+                if (args.length != 1) {
+                    player.sendMessage(this.miniMessage.deserialize(this.prefix + "Usage: /friend list <dark_gray>| <gray>Get a list of all friends"));
+                    return;
+                }
 
+                this.handleList(player);
             }
 
             case "requests" -> {
@@ -109,6 +121,11 @@ public class FriendCommand implements SimpleCommand {
                     this.proxyServer.getScheduler().buildTask(this.plugin, () -> {
                         if (uuid == null) {
                             player.sendMessage(this.miniMessage.deserialize(this.prefix + "<red>Player not found"));
+                            return;
+                        }
+
+                        if (uuid.equals(player.getUniqueId())) {
+                            player.sendMessage(this.miniMessage.deserialize(this.prefix + "<red>You can't add yourself as a friend."));
                             return;
                         }
 
@@ -210,6 +227,62 @@ public class FriendCommand implements SimpleCommand {
                         player.sendMessage(this.miniMessage.deserialize(this.prefix + "<green>You have declined the request from " + name + "."));
                     }).schedule();
                 });
+    }
+
+    private void handleJump(Player player, String name) {
+        UUIDFetcher.getUUIDAsync(name)
+                .exceptionally(ex -> null)
+                .thenAccept(uuid -> {
+                    this.proxyServer.getScheduler().buildTask(this.plugin, () -> {
+                        if (uuid == null) {
+                            player.sendMessage(this.miniMessage.deserialize(this.prefix + "<red>Player not found"));
+                            return;
+                        }
+
+                        FriendsData playerData = this.friendsManager.get(player.getUniqueId());
+                        if (!playerData.getFriends().containsKey(uuid)) {
+                            player.sendMessage(this.miniMessage.deserialize(this.prefix + "<red>You are not friends with this player."));
+                            return;
+                        }
+
+                        Player target = this.proxyServer.getPlayer(uuid).orElse(null);
+                        if (target == null) {
+                            player.sendMessage(this.miniMessage.deserialize(this.prefix + "<red>The player " + name + " is not online."));
+                            return;
+                        }
+
+                        FriendsData targetData = this.friendsManager.get(uuid);
+                        if (!targetData.getSettings().isJumpEnabled()) {
+                            player.sendMessage(this.miniMessage.deserialize(this.prefix + "<red>The player " + name + " has disabled the jump feature."));
+                            return;
+                        }
+
+                        ServerConnection serverConnection = target.getCurrentServer().orElse(null);
+                        if (serverConnection == null) {
+                            player.sendMessage(this.miniMessage.deserialize(this.prefix + "<red>The player " + name + " is not connected to a server."));
+                            return;
+                        }
+
+                        RegisteredServer registeredServer = serverConnection.getServer();
+                        if (registeredServer == null) {
+                            player.sendMessage(this.miniMessage.deserialize(this.prefix + "<red>The player " + name + " is not connected to a server."));
+                            return;
+                        }
+
+                        player.createConnectionRequest(registeredServer).fireAndForget();
+                        player.sendMessage(this.miniMessage.deserialize(this.prefix + "<green>You are now on the server of " + name + "."));
+                    }).schedule();
+                });
+    }
+
+    private void handleList(Player player) {
+        FriendsData friendsData = this.friendsManager.get(player.getUniqueId());
+        if (friendsData.getFriends().isEmpty()) {
+            player.sendMessage(this.miniMessage.deserialize(this.prefix + "<red>You have no friends."));
+            return;
+        }
+
+
     }
 
     @Override

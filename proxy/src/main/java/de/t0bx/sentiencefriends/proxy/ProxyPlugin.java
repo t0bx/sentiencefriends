@@ -103,7 +103,7 @@ public class ProxyPlugin {
     private void registerListener() {
         final EventManager eventManager = proxyServer.getEventManager();
 
-        eventManager.register(this, new PreLoginListener(this.friendsManager));
+        eventManager.register(this, new PreLoginListener(this, this.friendsManager));
     }
 
     private void createDatabaseTables() {
@@ -121,6 +121,7 @@ public class ProxyPlugin {
                 CREATE TABLE IF NOT EXISTS friends_data(
                 uuid_player VARCHAR(36) NOT NULL,
                 uuid_friend VARCHAR(36) NOT NULL,
+                cached_name VARCHAR(36) NOT NULL,
                 since BIGINT NOT NULL,
                 last_online BIGINT NOT NULL,
                 favorite BOOLEAN DEFAULT FALSE,

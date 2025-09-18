@@ -10,6 +10,7 @@ import de.t0bx.sentiencefriends.proxy.friends.FriendsManager;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
 public class PreLoginListener {
 
@@ -38,14 +39,31 @@ public class PreLoginListener {
 
             this.friendsManager.loadFriends(uuid).thenAccept(loaded -> {
                 FriendsData friendsData = this.friendsManager.get(uuid);
-                for (Player players : ProxyPlugin.getInstance().getProxyServer().getAllPlayers()) {
-                    if (!friendsData.getFriends().containsKey(players.getUniqueId())) continue;
+                StringBuilder nameRefresh = new StringBuilder();
+                for (UUID friends : friendsData.getFriends().keySet()) {
+                    this.proxyServer.getPlayer(friends).ifPresent(friend -> {
+                        FriendsData friendData = this.friendsManager.get(friends);
 
-                    FriendsData playerData = this.friendsManager.get(players.getUniqueId());
-                    if (!playerData.getSettings().isNotificationsEnabled()) continue;
+                        nameRefresh.append(friend.getUsername()).append(",").append(friend.getUniqueId()).append(";");
+                        if (!friendData.getSettings().isNotificationsEnabled()) return;
 
-                    players.sendMessage(this.miniMessage.deserialize(this.prefix + "<green>" + event.getUsername() + " is now online."));
+                        friend.sendMessage(this.miniMessage.deserialize(this.prefix + "<green>" + event.getUsername() + " is now online."));
+                    });
                 }
+
+                if (nameRefresh.isEmpty()) return;
+
+                CompletableFuture.runAsync(() -> {
+                    String[] names = nameRefresh.substring(0, nameRefresh.length() - 1).split(";");
+                    for (String name : names) {
+                        String[] nameParts = name.split(",");
+                        if (nameParts.length != 2) continue;
+
+                        friendsData.getFriends().get(UUID.fromString(nameParts[1])).setCachedName(nameParts[0]);
+                    }
+
+                    //TODO batch Update for faster name lookup
+                });
             });
         });
     }
