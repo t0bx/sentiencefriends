@@ -17,6 +17,8 @@ dependencies {
     implementation("io.netty:netty-all:4.2.3.Final")
 }
 
-tasks.test {
-    useJUnitPlatform()
+java {
+    toolchain {
+        languageVersion.set(JavaLanguageVersion.of(21))
+    }
 }

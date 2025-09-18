@@ -2,18 +2,16 @@ package de.t0bx.sentiencefriends.proxy.friends;
 
 import com.velocitypowered.api.proxy.Player;
 import de.t0bx.sentiencefriends.proxy.ProxyPlugin;
-import de.t0bx.sentiencefriends.proxy.deferred.DeferredSaver;
+import de.t0bx.sentiencefriends.proxy.database.IMySQLManager;
 import lombok.Data;
 import lombok.Getter;
-import lombok.Setter;
-import org.spongepowered.configurate.objectmapping.meta.Setting;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
 @Data
-public class FriendsData implements AutoCloseable {
+public class FriendsData {
     private static final long SAVE_INTERVAL_MILLIS = TimeUnit.MINUTES.toMillis(5);
 
     private final UUID uuid;
@@ -21,8 +19,7 @@ public class FriendsData implements AutoCloseable {
     private final Map<UUID, Friend> friends;
     private final List<UUID> incomingRequests;
     private final List<UUID> outgoingRequests;
-
-    private final DeferredSaver saver;
+    private final IMySQLManager mySQLManager;
 
     public FriendsData(UUID uuid) {
         this.uuid = uuid;
@@ -30,11 +27,7 @@ public class FriendsData implements AutoCloseable {
         this.friends = new ConcurrentHashMap<>();
         this.incomingRequests = new ArrayList<>();
         this.outgoingRequests = new ArrayList<>();
-        this.saver = new DeferredSaver(
-                ProxyPlugin.getInstance(),
-                SAVE_INTERVAL_MILLIS,
-                "Friends-DeferredSaver-" + uuid
-        );
+        this.mySQLManager = ProxyPlugin.getInstance().getMySQLManager();
     }
 
     @Data
@@ -70,22 +63,27 @@ public class FriendsData implements AutoCloseable {
 
     public void sendRequest(UUID receiver) {
         this.outgoingRequests.add(receiver);
-        String update = "INSERT INTO friends_requests (sender, receiver) VALUES (?, ?)";
-        saver.enqueue(update, uuid.toString(), receiver.toString());
+        String update = "INSERT INTO friends_requests (uuid_sender, uuid_receiver) VALUES (?, ?)";
+        this.mySQLManager.updateAsync(update, uuid.toString(), receiver.toString());
+
+        Optional<Player> player = ProxyPlugin.getInstance().getProxyServer().getPlayer(receiver);
+        if (player.isEmpty()) return;
+
+        FriendsData friendsData = ProxyPlugin.getInstance().getFriendsManager().get(receiver);
+        friendsData.getIncomingRequests().add(uuid);
     }
 
     public void acceptRequest(UUID sender) {
         this.incomingRequests.remove(sender);
 
         String del = "DELETE FROM friends_requests WHERE uuid_sender = ? AND uuid_receiver = ?";
-        saver.enqueue(del, sender.toString(), uuid.toString());
+        this.mySQLManager.updateAsync(del, sender.toString(), uuid.toString());
 
-        String insert1 = "INSERT INTO friends_data (uuid_player, uuid_friend, since, last_online) VALUES (?, ?, ?, ?)";
+        String insert = "INSERT INTO friends_data (uuid_player, uuid_friend, since, last_online) VALUES (?, ?, ?, ?)";
         long now = System.currentTimeMillis();
-        saver.enqueue(insert1, uuid.toString(), sender.toString(), now, now);
+        this.mySQLManager.updateAsync(insert, uuid.toString(), sender.toString(), now, now);
+        this.mySQLManager.updateAsync(insert, sender.toString(), uuid.toString(), now, now);
 
-        String insert2 = "INSERT INTO friends_data (uuid_player, uuid_friend, since, last_online) VALUES (?, ?, ?, ?)";
-        saver.enqueue(insert2, sender.toString(), uuid.toString(), now, now);
         this.friends.put(sender, new Friend(sender, now));
 
         Optional<Player> player = ProxyPlugin.getInstance().getProxyServer().getPlayer(sender);
@@ -93,21 +91,37 @@ public class FriendsData implements AutoCloseable {
 
         FriendsData friendsData = ProxyPlugin.getInstance().getFriendsManager().get(sender);
         friendsData.getFriends().put(uuid, new Friend(uuid, now));
-        friendsData.getOutgoingRequests().remove(sender);
+        friendsData.getOutgoingRequests().remove(uuid);
     }
 
     public void declineRequest(UUID sender) {
         this.incomingRequests.remove(sender);
         String update = "DELETE FROM friends_requests WHERE uuid_sender = ? AND uuid_receiver = ?";
-        saver.enqueue(update, sender.toString(), uuid.toString());
+        this.mySQLManager.updateAsync(update, sender.toString(), uuid.toString());
+
+        Optional<Player> player = ProxyPlugin.getInstance().getProxyServer().getPlayer(sender);
+        if (player.isEmpty()) return;
+
+        FriendsData friendsData = ProxyPlugin.getInstance().getFriendsManager().get(sender);
+        friendsData.getOutgoingRequests().remove(uuid);
     }
 
     public void addFriend(UUID friend) {
-        Friend friendData = new Friend(friend, System.currentTimeMillis());
+        long since = System.currentTimeMillis();
+        Friend friendData = new Friend(friend, since);
         friends.put(friend, friendData);
 
         String insert = "INSERT INTO friends_data (uuid_player, uuid_friend, since, last_online) VALUES (?, ?, ?, ?)";
-        saver.enqueue(insert, uuid.toString(), friend.toString(), friendData.getSince(), friendData.getLastOnline());
+        this.mySQLManager.updateAsync(insert, uuid.toString(), friend.toString(), since, friendData.getLastOnline());
+
+        Friend newFriend = new Friend(uuid, since);
+        this.mySQLManager.updateAsync(insert, friend.toString(), uuid.toString(), since, newFriend.getLastOnline());
+
+        Optional<Player> player = ProxyPlugin.getInstance().getProxyServer().getPlayer(friend);
+        if (player.isEmpty()) return;
+
+        FriendsData friendsData = ProxyPlugin.getInstance().getFriendsManager().get(friend);
+        friendsData.getFriends().put(uuid, friendData);
     }
 
     public void removeFriend(UUID friend) {
@@ -115,7 +129,16 @@ public class FriendsData implements AutoCloseable {
         if (removed == null) return;
 
         String update = "DELETE FROM friends_data WHERE uuid_friend = ? AND uuid_player = ?";
-        saver.enqueue(update, friend.toString(), uuid.toString());
+        this.mySQLManager.updateAsync(update, friend.toString(), uuid.toString());
+
+        String update2 = "DELETE FROM friends_data WHERE uuid_friend = ? AND uuid_player = ?";
+        this.mySQLManager.updateAsync(update2, uuid.toString(), friend.toString());
+
+        Optional<Player> player = ProxyPlugin.getInstance().getProxyServer().getPlayer(friend);
+        if (player.isEmpty()) return;
+
+        FriendsData friendsData = ProxyPlugin.getInstance().getFriendsManager().get(friend);
+        friendsData.getFriends().remove(uuid);
     }
 
     public void setFavorite(UUID friend, boolean favorite) {
@@ -124,7 +147,7 @@ public class FriendsData implements AutoCloseable {
 
         friendData.setFavorite(favorite);
         String update = "UPDATE friends_data SET favorite = ? WHERE uuid_friend = ? AND uuid_player = ?";
-        saver.enqueue(update, friendData.isFavorite(), friend.toString(), uuid.toString());
+        this.mySQLManager.updateAsync(update, favorite, friend.toString(), uuid.toString());
     }
 
     public void updateLastOnline(UUID friend) {
@@ -135,7 +158,7 @@ public class FriendsData implements AutoCloseable {
         friendData.setLastOnline(now);
 
         String update = "UPDATE friends_data SET last_online = ? WHERE uuid_friend = ? AND uuid_player = ?";
-        saver.enqueue(update, now, friend.toString(), uuid.toString());
+        this.mySQLManager.updateAsync(update, now, friend.toString(), uuid.toString());
     }
 
     public void changeSetting(SettingType setting, boolean value) {
@@ -147,15 +170,6 @@ public class FriendsData implements AutoCloseable {
 
         String key = setting.getKey();
         String update = "UPDATE friends_settings SET " + key + " = ? WHERE uuid = ?";
-        saver.enqueue(update, value, uuid.toString());
-    }
-
-    public void flushNow() {
-        saver.flushNow();
-    }
-
-    @Override
-    public void close() {
-        saver.close();
+        this.mySQLManager.updateAsync(update, value, uuid.toString());
     }
 }

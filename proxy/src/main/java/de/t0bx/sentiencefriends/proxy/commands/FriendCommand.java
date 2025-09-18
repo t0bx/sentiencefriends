@@ -50,18 +50,41 @@ public class FriendCommand implements SimpleCommand {
             }
 
             case "remove" -> {
+                if (args.length != 2) {
+                    player.sendMessage(this.miniMessage.deserialize(this.prefix + "Usage: /friend remove <Name> <dark_gray>| <gray>Remove a friend"));
+                    return;
+                }
 
+                this.handleRemove(player, args[1]);
             }
 
             case "accept" -> {
+                if (args.length != 2) {
+                    player.sendMessage(this.miniMessage.deserialize(this.prefix + "Usage: /friend accept <Name> <dark_gray>| <gray>Accept a friend request"));
+                    return;
+                }
 
+                this.handleAccept(player, args[1]);
             }
 
             case "deny" -> {
+                if (args.length != 2) {
+                    player.sendMessage(this.miniMessage.deserialize(this.prefix + "Usage: /friend deny <Name> <dark_gray>| <gray>Deny a friend request"));
+                    return;
+                }
+
+                this.handleDeny(player, args[1]);
+            }
+
+            case "jump" -> {
 
             }
 
             case "list" -> {
+
+            }
+
+            case "requests" -> {
 
             }
         }
@@ -101,6 +124,12 @@ public class FriendCommand implements SimpleCommand {
                             return;
                         }
 
+                        if (friendsData.getIncomingRequests().contains(uuid)) {
+                            friendsData.acceptRequest(uuid);
+                            player.sendMessage(this.miniMessage.deserialize(this.prefix + "<green>You are now friends with " + name + "."));
+                            return;
+                        }
+
                         friendsData.sendRequest(uuid);
                         player.sendMessage(this.miniMessage.deserialize(this.prefix + "<green>You have sent a request to " + name + "."));
 
@@ -113,6 +142,72 @@ public class FriendCommand implements SimpleCommand {
                                             .clickEvent(ClickEvent.runCommand("/friend deny " + player.getUsername())))
                             );
                         });
+                    }).schedule();
+                });
+    }
+
+    private void handleRemove(Player player, String name) {
+        UUIDFetcher.getUUIDAsync(name)
+                .exceptionally(ex -> null)
+                .thenAccept(uuid -> {
+                    this.proxyServer.getScheduler().buildTask(this.plugin, () -> {
+                        if (uuid == null) {
+                            player.sendMessage(this.miniMessage.deserialize(this.prefix + "<red>Player not found"));
+                            return;
+                        }
+
+                        FriendsData playerData = this.friendsManager.get(player.getUniqueId());
+                        if (!playerData.getFriends().containsKey(uuid)) {
+                            player.sendMessage(this.miniMessage.deserialize(this.prefix + "<red>You are not friends with this player."));
+                            return;
+                        }
+
+                        playerData.removeFriend(uuid);
+                        player.sendMessage(this.miniMessage.deserialize(this.prefix + "<green>You are no longer friends with " + name + "."));
+                    }).schedule();
+                });
+    }
+
+    private void handleAccept(Player player, String name) {
+        UUIDFetcher.getUUIDAsync(name)
+                .exceptionally(ex -> null)
+                .thenAccept(uuid -> {
+                    this.proxyServer.getScheduler().buildTask(this.plugin, () -> {
+                        if (uuid == null) {
+                            player.sendMessage(this.miniMessage.deserialize(this.prefix + "<red>Player not found"));
+                            return;
+                        }
+
+                        FriendsData playerData = this.friendsManager.get(player.getUniqueId());
+                        if (!playerData.getIncomingRequests().contains(uuid)) {
+                            player.sendMessage(this.miniMessage.deserialize(this.prefix + "<red>You have no incoming requests from this player."));
+                            return;
+                        }
+
+                        playerData.acceptRequest(uuid);
+                        player.sendMessage(this.miniMessage.deserialize(this.prefix + "<green>You are now friends with " + name + "."));
+                    }).schedule();
+                });
+    }
+
+    private void handleDeny(Player player, String name) {
+        UUIDFetcher.getUUIDAsync(name)
+                .exceptionally(ex -> null)
+                .thenAccept(uuid -> {
+                    this.proxyServer.getScheduler().buildTask(this.plugin, () -> {
+                        if (uuid == null) {
+                            player.sendMessage(this.miniMessage.deserialize(this.prefix + "<red>Player not found"));
+                            return;
+                        }
+
+                        FriendsData playerData = this.friendsManager.get(player.getUniqueId());
+                        if (!playerData.getIncomingRequests().contains(uuid)) {
+                            player.sendMessage(this.miniMessage.deserialize(this.prefix + "<red>You have no incoming requests from this player."));
+                            return;
+                        }
+
+                        playerData.declineRequest(uuid);
+                        player.sendMessage(this.miniMessage.deserialize(this.prefix + "<green>You have declined the request from " + name + "."));
                     }).schedule();
                 });
     }

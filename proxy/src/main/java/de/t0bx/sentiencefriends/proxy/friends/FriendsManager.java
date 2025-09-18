@@ -25,8 +25,8 @@ public class FriendsManager {
         this.logger = plugin.getLogger();
     }
 
-    public void loadFriends(UUID uuid) {
-        this.mySQLManager.transactionAsync(connection -> {
+    public CompletableFuture<Void> loadFriends(UUID uuid) {
+        return this.mySQLManager.transactionAsync(connection -> {
             FriendsData friendsData = new FriendsData(uuid);
 
             final String query = """
