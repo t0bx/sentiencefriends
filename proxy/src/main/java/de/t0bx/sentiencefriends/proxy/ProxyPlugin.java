@@ -10,15 +10,23 @@ import com.velocitypowered.api.event.proxy.ProxyShutdownEvent;
 import com.velocitypowered.api.plugin.Plugin;
 import com.velocitypowered.api.proxy.ProxyServer;
 import de.t0bx.sentiencefriends.proxy.commands.FriendCommand;
+import de.t0bx.sentiencefriends.proxy.commands.PartyChatCommand;
+import de.t0bx.sentiencefriends.proxy.commands.PartyCommand;
 import de.t0bx.sentiencefriends.proxy.database.DatabaseFile;
 import de.t0bx.sentiencefriends.proxy.database.IMySQLManager;
 import de.t0bx.sentiencefriends.proxy.database.MySQLManager;
 import de.t0bx.sentiencefriends.proxy.friends.FriendsManager;
+import de.t0bx.sentiencefriends.proxy.listener.PartyServerSwitchListener;
+import de.t0bx.sentiencefriends.proxy.listener.PlayerDisconnectListener;
 import de.t0bx.sentiencefriends.proxy.listener.PreLoginListener;
+import de.t0bx.sentiencefriends.proxy.party.PartyManager;
 import lombok.Getter;
+import lombok.Setter;
 import org.slf4j.Logger;
 
 import java.sql.SQLException;
+import java.util.HashSet;
+import java.util.Set;
 
 @Plugin(
         id = "sentiencefriends-velocity",
@@ -37,8 +45,15 @@ public class ProxyPlugin {
 
     private IMySQLManager mySQLManager;
     private final FriendsManager friendsManager;
+    private final PartyManager partyManager;
 
     private final String prefix = "<gradient:#00aaaa:#55ffff>Friends <dark_gray>» <gray>";
+    private final String partyPrefix = "<gradient:#aa00aa:#ff55ff>Party <dark_gray>» <gray>";
+
+    private final Set<String> blockedServers;
+
+    @Setter
+    private boolean isShutdown;
 
     @Inject
     public ProxyPlugin(Logger logger, ProxyServer proxyServer) {
@@ -71,6 +86,8 @@ public class ProxyPlugin {
         }
 
         this.friendsManager = new FriendsManager(this);
+        this.partyManager = new PartyManager(this.proxyServer);
+        this.blockedServers = new HashSet<>();
     }
 
     @Subscribe
@@ -85,6 +102,8 @@ public class ProxyPlugin {
     @Subscribe
     public void onProxyShutdown(ProxyShutdownEvent event) {
         try {
+            this.setShutdown(true);
+
             if (this.mySQLManager != null && !this.mySQLManager.getConnection().isClosed()) {
                 this.mySQLManager.disconnect();
             }
@@ -96,14 +115,22 @@ public class ProxyPlugin {
     private void registerCommands() {
         final CommandManager commandManager = proxyServer.getCommandManager();
 
-        final CommandMeta friendCommandMeta = commandManager.metaBuilder("friend").aliases("friends").plugin(this).build();
+        final CommandMeta friendCommandMeta = commandManager.metaBuilder("friend").aliases("friends", "f").plugin(this).build();
         commandManager.register(friendCommandMeta, new FriendCommand(this, this.friendsManager));
+
+        final CommandMeta partyCommandMeta = commandManager.metaBuilder("party").aliases("p").plugin(this).build();
+        commandManager.register(partyCommandMeta, new PartyCommand(this, this.partyManager));
+
+        final CommandMeta partyChatCommandMeta = commandManager.metaBuilder("partychat").aliases("pc").plugin(this).build();
+        commandManager.register(partyChatCommandMeta, new PartyChatCommand(this, this.partyManager));
     }
 
     private void registerListener() {
         final EventManager eventManager = proxyServer.getEventManager();
 
         eventManager.register(this, new PreLoginListener(this, this.friendsManager));
+        eventManager.register(this, new PlayerDisconnectListener(this, this.friendsManager));
+        eventManager.register(this, new PartyServerSwitchListener(this, this.partyManager));
     }
 
     private void createDatabaseTables() {

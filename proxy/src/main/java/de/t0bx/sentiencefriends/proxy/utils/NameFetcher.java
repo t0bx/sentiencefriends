@@ -7,11 +7,13 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.stream.Collectors;
 
 /**
  * A utility class that retrieves player names based on UUIDs from either
@@ -69,6 +71,29 @@ public class NameFetcher {
                 throw new RuntimeException("Fehler beim Abrufen des Namens für UUID " + uuid, e);
             }
         }, EXECUTOR);
+    }
+
+    public static CompletableFuture<List<String>> getNamesAsync(List<UUID> uuids) {
+        if (uuids == null) {
+            return CompletableFuture.failedFuture(new IllegalArgumentException("UUID-Liste darf nicht null sein"));
+        }
+
+        List<CompletableFuture<String>> perUuid = uuids.stream()
+                .map(uuid -> {
+                    if (uuid == null) {
+                        return CompletableFuture.<String>completedFuture(null);
+                    }
+                    return getNameAsync(uuid).exceptionally(ex -> null);
+                })
+                .toList();
+
+        CompletableFuture<Void> all = CompletableFuture.allOf(perUuid.toArray(new CompletableFuture[0]));
+
+        return all.thenApply(v ->
+                perUuid.stream()
+                        .map(CompletableFuture::join)
+                        .collect(Collectors.toList())
+        );
     }
 
     /**

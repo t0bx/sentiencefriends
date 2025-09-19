@@ -8,12 +8,14 @@ import com.velocitypowered.api.proxy.server.RegisteredServer;
 import de.t0bx.sentiencefriends.proxy.ProxyPlugin;
 import de.t0bx.sentiencefriends.proxy.friends.FriendsData;
 import de.t0bx.sentiencefriends.proxy.friends.FriendsManager;
+import de.t0bx.sentiencefriends.proxy.utils.NameFetcher;
 import de.t0bx.sentiencefriends.proxy.utils.UUIDFetcher;
 import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 public class FriendCommand implements SimpleCommand {
 
@@ -87,6 +89,15 @@ public class FriendCommand implements SimpleCommand {
                 this.handleJump(player, args[1]);
             }
 
+            case "favorite" -> {
+                if (args.length != 2) {
+                    player.sendMessage(this.miniMessage.deserialize(this.prefix + "Usage: /friend favorite <Name> <dark_gray>| <gray>Mark a friend as a favorite or no longer as favorite"));
+                    return;
+                }
+
+                this.handleFavorite(player, args[1]);
+            }
+
             case "list" -> {
                 if (args.length != 1) {
                     player.sendMessage(this.miniMessage.deserialize(this.prefix + "Usage: /friend list <dark_gray>| <gray>Get a list of all friends"));
@@ -97,8 +108,19 @@ public class FriendCommand implements SimpleCommand {
             }
 
             case "requests" -> {
+                if (args.length != 1) {
+                    player.sendMessage(this.miniMessage.deserialize(this.prefix + "Usage: /friend requests <dark_gray>| <gray>Get a list of all requests"));
+                    return;
+                }
 
+                this.handleRequests(player);
             }
+
+            case "settings" -> {
+                this.handleSettings(player, args);
+            }
+
+            default -> this.handleHelp(player);
         }
     }
 
@@ -109,8 +131,10 @@ public class FriendCommand implements SimpleCommand {
         player.sendMessage(this.miniMessage.deserialize(this.prefix + "-/friend accept <Name> <dark_gray>| <gray>Accept a friend request."));
         player.sendMessage(this.miniMessage.deserialize(this.prefix + "-/friend deny <Name> <dark_gray>| <gray>Deny a friend request."));
         player.sendMessage(this.miniMessage.deserialize(this.prefix + "-/friend jump <Name> <dark_gray>| <gray>Jump to a friend."));
+        player.sendMessage(this.miniMessage.deserialize(this.prefix + "-/friend favorite <Name> <dark_gray>| <gray>Mark a friend as a favorite or no longer as favorite."));
         player.sendMessage(this.miniMessage.deserialize(this.prefix + "-/friend list <dark_gray>| <gray>Get a list of all friends."));
         player.sendMessage(this.miniMessage.deserialize(this.prefix + "-/friend requests <dark_gray>| <gray>Get a list of all requests."));
+        player.sendMessage(this.miniMessage.deserialize(this.prefix + "-/friend settings <dark_gray>| <gray>Get a list of all settings."));
         player.sendMessage(this.miniMessage.deserialize(this.prefix + " "));
     }
 
@@ -118,48 +142,57 @@ public class FriendCommand implements SimpleCommand {
         UUIDFetcher.getUUIDAsync(name)
                 .exceptionally(ex -> null)
                 .thenAccept(uuid -> {
-                    this.proxyServer.getScheduler().buildTask(this.plugin, () -> {
-                        if (uuid == null) {
-                            player.sendMessage(this.miniMessage.deserialize(this.prefix + "<red>Player not found"));
-                            return;
-                        }
+                    if (uuid == null) {
+                        this.proxyServer.getScheduler().buildTask(this.plugin, () ->
+                                player.sendMessage(this.miniMessage.deserialize(this.prefix + "<red>Player not found"))).schedule();
+                        return;
+                    }
 
-                        if (uuid.equals(player.getUniqueId())) {
-                            player.sendMessage(this.miniMessage.deserialize(this.prefix + "<red>You can't add yourself as a friend."));
-                            return;
-                        }
+                    this.friendsManager.doesFriendAcceptRequests(uuid)
+                            .exceptionally(ex -> false)
+                            .thenAccept(acceptsRequests ->
+                                    this.proxyServer.getScheduler().buildTask(this.plugin, () -> {
+                                        if (uuid.equals(player.getUniqueId())) {
+                                            player.sendMessage(this.miniMessage.deserialize(this.prefix + "<red>You can't add yourself as a friend."));
+                                            return;
+                                        }
 
-                        FriendsData friendsData = this.friendsManager.get(player.getUniqueId());
+                                        FriendsData friendsData = this.friendsManager.get(player.getUniqueId());
 
-                        if (friendsData.getFriends().containsKey(uuid)) {
-                            player.sendMessage(this.miniMessage.deserialize(this.prefix + "<red>You already have this friend."));
-                            return;
-                        }
+                                        if (friendsData.getFriends().containsKey(uuid)) {
+                                            player.sendMessage(this.miniMessage.deserialize(this.prefix + "<red>You already have this friend."));
+                                            return;
+                                        }
 
-                        if (friendsData.getOutgoingRequests().contains(uuid)) {
-                            player.sendMessage(this.miniMessage.deserialize(this.prefix + "<red>You already have a request for this player."));
-                            return;
-                        }
+                                        if (friendsData.getOutgoingRequests().contains(uuid)) {
+                                            player.sendMessage(this.miniMessage.deserialize(this.prefix + "<red>You already have a request for this player."));
+                                            return;
+                                        }
 
-                        if (friendsData.getIncomingRequests().contains(uuid)) {
-                            friendsData.acceptRequest(uuid);
-                            player.sendMessage(this.miniMessage.deserialize(this.prefix + "<green>You are now friends with " + name + "."));
-                            return;
-                        }
+                                        if (friendsData.getIncomingRequests().contains(uuid)) {
+                                            friendsData.acceptRequest(player.getUsername(), uuid, name);
+                                            player.sendMessage(this.miniMessage.deserialize(this.prefix + "<green>You are now friends with " + name + "."));
+                                            return;
+                                        }
 
-                        friendsData.sendRequest(uuid);
-                        player.sendMessage(this.miniMessage.deserialize(this.prefix + "<green>You have sent a request to " + name + "."));
+                                        if (!acceptsRequests) {
+                                            player.sendMessage(this.miniMessage.deserialize(this.prefix + "<red>The player " + name + " has disabled friend requests."));
+                                            return;
+                                        }
 
-                        Optional<Player> optionalTarget = this.proxyServer.getPlayer(uuid);
-                        optionalTarget.ifPresent(target -> {
-                            target.sendMessage(this.miniMessage.deserialize(this.prefix + "<green>You have received a request from " + player.getUsername() + "."));
-                            target.sendMessage(this.miniMessage.deserialize(this.prefix + "<green><b>[ACCEPT]")
-                                    .clickEvent(ClickEvent.runCommand("/friend accept " + player.getUsername()))
-                                    .append(this.miniMessage.deserialize(" <red><b>[DENY]")
-                                            .clickEvent(ClickEvent.runCommand("/friend deny " + player.getUsername())))
-                            );
-                        });
-                    }).schedule();
+                                        friendsData.sendRequest(uuid);
+                                        player.sendMessage(this.miniMessage.deserialize(this.prefix + "<green>You have sent a request to " + name + "."));
+
+                                        Optional<Player> optionalTarget = this.proxyServer.getPlayer(uuid);
+                                        optionalTarget.ifPresent(target -> {
+                                            target.sendMessage(this.miniMessage.deserialize(this.prefix + "<green>You have received a request from " + player.getUsername() + "."));
+                                            target.sendMessage(this.miniMessage.deserialize(this.prefix + "<green><b>[ACCEPT]")
+                                                    .clickEvent(ClickEvent.runCommand("/friend accept " + player.getUsername()))
+                                                    .append(this.miniMessage.deserialize(" <red><b>[DENY]")
+                                                            .clickEvent(ClickEvent.runCommand("/friend deny " + player.getUsername())))
+                                            );
+                                        });
+                                    }).schedule());
                 });
     }
 
@@ -201,7 +234,7 @@ public class FriendCommand implements SimpleCommand {
                             return;
                         }
 
-                        playerData.acceptRequest(uuid);
+                        playerData.acceptRequest(player.getUsername(), uuid, name);
                         player.sendMessage(this.miniMessage.deserialize(this.prefix + "<green>You are now friends with " + name + "."));
                     }).schedule();
                 });
@@ -269,6 +302,11 @@ public class FriendCommand implements SimpleCommand {
                             return;
                         }
 
+                        if (player.getCurrentServer().get().getServer().getServerInfo().getName().equals(registeredServer.getServerInfo().getName())) {
+                            player.sendMessage(this.miniMessage.deserialize(this.prefix + "<red>You are already on the same server as " + name + "."));
+                            return;
+                        }
+
                         player.createConnectionRequest(registeredServer).fireAndForget();
                         player.sendMessage(this.miniMessage.deserialize(this.prefix + "<green>You are now on the server of " + name + "."));
                     }).schedule();
@@ -282,7 +320,127 @@ public class FriendCommand implements SimpleCommand {
             return;
         }
 
+        List<FriendsData.Friend> favoriteFriends = friendsData.getFriends().values().stream()
+                .filter(FriendsData.Friend::isFavorite)
+                .toList();
 
+        List<FriendsData.Friend> onlineFriends = friendsData.getFriends().values().stream()
+                .filter(FriendsData.Friend::isOnline)
+                .filter(f -> !f.isFavorite())
+                .toList();
+
+        List<FriendsData.Friend> offlineFriends = friendsData.getFriends().values().stream()
+                .filter(f -> !f.isOnline())
+                .filter(f -> !f.isFavorite())
+                .toList();
+
+        for (FriendsData.Friend favoriteFriend : favoriteFriends) {
+            final String cachedName = favoriteFriend.getCachedName();
+            String message = favoriteFriend.isOnline() ? "<green>Online" : "<red>Last online <gray>" + favoriteFriend.getLastOnlineTime() + "<gray>.";
+
+            player.sendMessage(this.miniMessage.deserialize(this.prefix + "<yellow>★ <gray>" + cachedName + " " + message));
+        }
+
+        for (FriendsData.Friend onlineFriend : onlineFriends) {
+            player.sendMessage(this.miniMessage.deserialize(this.prefix + "<gray>" + onlineFriend.getCachedName() + " <dark_gray>» <green>Online."));
+        }
+
+        for (FriendsData.Friend offlineFriend : offlineFriends) {
+            player.sendMessage(this.miniMessage.deserialize(this.prefix + "<gray>" + offlineFriend.getCachedName() + " <dark_gray>» <gray>Last online <red>" + offlineFriend.getLastOnlineTime() + "<gray>."));
+        }
+    }
+
+    private void handleFavorite(Player player, String name) {
+        UUIDFetcher.getUUIDAsync(name)
+                .exceptionally(ex -> null)
+                .thenAccept(uuid -> {
+                    this.proxyServer.getScheduler().buildTask(this.plugin, () -> {
+                        if (uuid == null) {
+                            player.sendMessage(this.miniMessage.deserialize(this.prefix + "<red>Player not found"));
+                            return;
+                        }
+
+                        FriendsData friendsData = this.friendsManager.get(player.getUniqueId());
+                        if (!friendsData.getFriends().containsKey(uuid)) {
+                            player.sendMessage(this.miniMessage.deserialize(this.prefix + "<red>You are not friends with this player."));
+                            return;
+                        }
+
+                        FriendsData.Friend friend = friendsData.getFriends().getOrDefault(uuid, null);
+                        if (friend == null) {
+                            player.sendMessage(this.miniMessage.deserialize(this.prefix + "<red>An error occurred."));
+                            return;
+                        }
+
+                        boolean isFavorite = friendsData.getFriends().get(uuid).isFavorite();
+                        String message = isFavorite ?
+                                "<red>" + name + " is now no longer marked as favorite." :
+                                "<green>" + name + " is now marked as favorite.";
+
+                        friendsData.setFavorite(uuid, !isFavorite);
+                        player.sendMessage(this.miniMessage.deserialize(this.prefix + message));
+                    }).schedule();
+                });
+    }
+
+    private void handleRequests(Player player) {
+        FriendsData friendsData = this.friendsManager.get(player.getUniqueId());
+        if (friendsData.getIncomingRequests().isEmpty()) {
+            player.sendMessage(this.miniMessage.deserialize(this.prefix + "<red>You have no incoming requests."));
+            return;
+        }
+
+        NameFetcher.getNamesAsync(friendsData.getIncomingRequests())
+                .exceptionally(ex -> null)
+                .thenAccept(names -> {
+                    if (names == null) {
+                        player.sendMessage(this.miniMessage.deserialize(this.prefix + "<red>An error occurred."));
+                        return;
+                    }
+
+                    player.sendMessage(this.miniMessage.deserialize(this.prefix + "<green>Incoming requests (" + names.size() + "):"));
+                    for (String name : names) {
+                        player.sendMessage(this.miniMessage.deserialize(this.prefix + "<gray>" + name));
+                    }
+                });
+    }
+
+    private void handleSettings(Player player, String[] args) {
+        if (args.length != 2) {
+            player.sendMessage(this.miniMessage.deserialize(this.prefix + "Usage: /friend settings <jump|notifications|requests> <dark_gray>| <gray>Set a setting"));
+            return;
+        }
+
+        FriendsData friendsData = this.friendsManager.get(player.getUniqueId());
+
+        switch (args[1].toLowerCase()) {
+            case "jump" -> {
+                boolean enabled = friendsData.getSettings().isJumpEnabled();
+                friendsData.changeSetting(FriendsData.SettingType.JUMP, !enabled);
+                String message = enabled
+                        ? "<red>Friends will no longer be able to jump to your server"
+                        : "<green>Friends will now be able to jump to your server";
+                player.sendMessage(this.miniMessage.deserialize(this.prefix + message));
+            }
+
+            case "notifications" -> {
+                boolean enabled = friendsData.getSettings().isNotificationsEnabled();
+                friendsData.changeSetting(FriendsData.SettingType.NOTIFICATIONS, !enabled);
+                String message = enabled
+                        ? "<red>You will no longer receive friend notifications"
+                        : "<green>You will now receive friend notifications";
+                player.sendMessage(this.miniMessage.deserialize(this.prefix + message));
+            }
+
+            case "requests" -> {
+                boolean enabled = friendsData.getSettings().isRequestsEnabled();
+                friendsData.changeSetting(FriendsData.SettingType.REQUESTS, !enabled);
+                String message = enabled
+                        ? "<red>You will no longer receive friend requests"
+                        : "<green>You will now receive friend requests";
+                player.sendMessage(this.miniMessage.deserialize(this.prefix + message));
+            }
+        }
     }
 
     @Override

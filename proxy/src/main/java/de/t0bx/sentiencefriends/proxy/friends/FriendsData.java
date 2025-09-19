@@ -1,10 +1,12 @@
 package de.t0bx.sentiencefriends.proxy.friends;
 
 import com.velocitypowered.api.proxy.Player;
+import com.velocitypowered.api.proxy.ProxyServer;
 import de.t0bx.sentiencefriends.proxy.ProxyPlugin;
 import de.t0bx.sentiencefriends.proxy.database.IMySQLManager;
 import lombok.Data;
 import lombok.Getter;
+import net.kyori.adventure.text.minimessage.MiniMessage;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -20,6 +22,7 @@ public class FriendsData {
     private final List<UUID> incomingRequests;
     private final List<UUID> outgoingRequests;
     private final IMySQLManager mySQLManager;
+    private final ProxyServer proxyServer;
 
     public FriendsData(UUID uuid) {
         this.uuid = uuid;
@@ -28,6 +31,7 @@ public class FriendsData {
         this.incomingRequests = new ArrayList<>();
         this.outgoingRequests = new ArrayList<>();
         this.mySQLManager = ProxyPlugin.getInstance().getMySQLManager();
+        this.proxyServer = ProxyPlugin.getInstance().getProxyServer();
     }
 
     @Data
@@ -37,12 +41,34 @@ public class FriendsData {
         private final long since;
         private long lastOnline;
         private boolean favorite;
+        private boolean online;
 
         public Friend(UUID uuid, String cachedName, long since) {
             this.uuid = uuid;
             this.cachedName = cachedName;
             this.since = since;
             this.lastOnline = since;
+        }
+
+        public String getLastOnlineTime() {
+            long diff = System.currentTimeMillis() - this.lastOnline;
+            if (diff < 0) diff = 0;
+
+            long seconds = diff / 1000;
+            long days = seconds / 86_400;
+            seconds %= 86_400;
+            long hours = seconds / 3_600;
+            seconds %= 3_600;
+            long minutes = seconds / 60;
+            seconds %= 60;
+
+            StringBuilder sb = new StringBuilder();
+            if (days > 0) sb.append(days).append("d ");
+            if (hours > 0) sb.append(hours).append("h ");
+            if (minutes > 0) sb.append(minutes).append("m ");
+            if (seconds > 0 || sb.isEmpty()) sb.append(seconds).append("s");
+
+            return sb.toString().trim();
         }
     }
 
@@ -60,7 +86,10 @@ public class FriendsData {
         JUMP("jump_enabled");
 
         private final String key;
-        SettingType(String key) { this.key = key; }
+
+        SettingType(String key) {
+            this.key = key;
+        }
     }
 
     public void sendRequest(UUID receiver) {
@@ -68,11 +97,12 @@ public class FriendsData {
         String update = "INSERT INTO friends_requests (uuid_sender, uuid_receiver) VALUES (?, ?)";
         this.mySQLManager.updateAsync(update, uuid.toString(), receiver.toString());
 
-        Optional<Player> player = ProxyPlugin.getInstance().getProxyServer().getPlayer(receiver);
-        if (player.isEmpty()) return;
+        this.proxyServer.getPlayer(receiver).ifPresent(player -> {
+            FriendsData friendsData = ProxyPlugin.getInstance().getFriendsManager().get(receiver);
+            if (friendsData == null) return;
 
-        FriendsData friendsData = ProxyPlugin.getInstance().getFriendsManager().get(receiver);
-        friendsData.getIncomingRequests().add(uuid);
+            friendsData.getIncomingRequests().add(uuid);
+        });
     }
 
     public void acceptRequest(String playerName, UUID sender, String friendName) {
@@ -86,14 +116,22 @@ public class FriendsData {
         this.mySQLManager.updateAsync(insert, uuid.toString(), sender.toString(), friendName, now, now);
         this.mySQLManager.updateAsync(insert, sender.toString(), uuid.toString(), playerName, now, now);
 
-        this.friends.put(sender, new Friend(sender, friendName, now));
+        Friend selfFriend = new Friend(uuid, friendName, now);
 
-        Optional<Player> player = ProxyPlugin.getInstance().getProxyServer().getPlayer(sender);
-        if (player.isEmpty()) return;
+        this.proxyServer.getPlayer(sender).ifPresent(player -> {
+            FriendsData friendsData = ProxyPlugin.getInstance().getFriendsManager().get(sender);
+            if (friendsData == null) return;
 
-        FriendsData friendsData = ProxyPlugin.getInstance().getFriendsManager().get(sender);
-        friendsData.getFriends().put(uuid, new Friend(uuid, playerName, now));
-        friendsData.getOutgoingRequests().remove(uuid);
+            Friend friend = new Friend(uuid, playerName, now);
+            friend.setOnline(true);
+            selfFriend.setOnline(true);
+
+            friendsData.getFriends().put(uuid, friend);
+            friendsData.getOutgoingRequests().remove(uuid);
+            player.sendMessage(MiniMessage.miniMessage().deserialize(ProxyPlugin.getInstance().getPrefix() + "<green>You are now friends with " + playerName + "."));
+        });
+
+        this.friends.put(sender, selfFriend);
     }
 
     public void declineRequest(UUID sender) {
@@ -101,11 +139,12 @@ public class FriendsData {
         String update = "DELETE FROM friends_requests WHERE uuid_sender = ? AND uuid_receiver = ?";
         this.mySQLManager.updateAsync(update, sender.toString(), uuid.toString());
 
-        Optional<Player> player = ProxyPlugin.getInstance().getProxyServer().getPlayer(sender);
-        if (player.isEmpty()) return;
+        this.proxyServer.getPlayer(sender).ifPresent(player -> {
+            FriendsData friendsData = ProxyPlugin.getInstance().getFriendsManager().get(sender);
+            if (friendsData == null) return;
 
-        FriendsData friendsData = ProxyPlugin.getInstance().getFriendsManager().get(sender);
-        friendsData.getOutgoingRequests().remove(uuid);
+            friendsData.getOutgoingRequests().remove(uuid);
+        });
     }
 
     public void removeFriend(UUID friend) {
@@ -118,11 +157,12 @@ public class FriendsData {
         String update2 = "DELETE FROM friends_data WHERE uuid_friend = ? AND uuid_player = ?";
         this.mySQLManager.updateAsync(update2, uuid.toString(), friend.toString());
 
-        Optional<Player> player = ProxyPlugin.getInstance().getProxyServer().getPlayer(friend);
-        if (player.isEmpty()) return;
+        this.proxyServer.getPlayer(friend).ifPresent(player -> {
+            FriendsData friendsData = ProxyPlugin.getInstance().getFriendsManager().get(friend);
+            if (friendsData == null) return;
 
-        FriendsData friendsData = ProxyPlugin.getInstance().getFriendsManager().get(friend);
-        friendsData.getFriends().remove(uuid);
+            friendsData.getFriends().remove(uuid);
+        });
     }
 
     public void setFavorite(UUID friend, boolean favorite) {
@@ -132,17 +172,6 @@ public class FriendsData {
         friendData.setFavorite(favorite);
         String update = "UPDATE friends_data SET favorite = ? WHERE uuid_friend = ? AND uuid_player = ?";
         this.mySQLManager.updateAsync(update, favorite, friend.toString(), uuid.toString());
-    }
-
-    public void updateLastOnline(UUID friend) {
-        Friend friendData = friends.get(friend);
-        if (friendData == null) return;
-
-        long now = System.currentTimeMillis();
-        friendData.setLastOnline(now);
-
-        String update = "UPDATE friends_data SET last_online = ? WHERE uuid_friend = ? AND uuid_player = ?";
-        this.mySQLManager.updateAsync(update, now, friend.toString(), uuid.toString());
     }
 
     public void changeSetting(SettingType setting, boolean value) {
