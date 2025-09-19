@@ -34,7 +34,7 @@ public class PartyChatCommand implements SimpleCommand {
             return;
         }
 
-        if (!this.partyManager.isPartyLeader(player.getUniqueId()) || !this.partyManager.isMemberOfParty(player.getUniqueId())) {
+        if (!this.partyManager.isPartyLeader(player.getUniqueId()) && !this.partyManager.isMemberOfParty(player.getUniqueId())) {
             player.sendMessage(this.miniMessage.deserialize(this.prefix + "<red>You are currently not in a party!"));
             return;
         }
@@ -55,7 +55,7 @@ public class PartyChatCommand implements SimpleCommand {
             return;
         }
 
-        String message = String.join(" ", Arrays.copyOfRange(args, 1, args.length));
+        String message = String.join(" ", Arrays.copyOfRange(args, 0, args.length));
         for (UUID uuid : partyData.getMembers()) {
             this.proxyServer.getPlayer(uuid).ifPresent(member -> {
                member.sendMessage(this.miniMessage.deserialize(this.prefix + message));

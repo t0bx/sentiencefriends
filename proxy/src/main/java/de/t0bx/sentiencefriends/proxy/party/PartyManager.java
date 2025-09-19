@@ -55,7 +55,10 @@ public class PartyManager {
         UUID leader = this.pendingInvites.remove(member);
         if (leader == null) return;
 
-        this.parties.getOrDefault(leader, null).getMembers().add(member);
+        PartyData partyData = this.parties.getOrDefault(leader, null);
+        if (partyData == null) return;
+
+        partyData.getMembers().add(member);
     }
 
     public void declinePartyInvite(UUID member) {
@@ -80,11 +83,18 @@ public class PartyManager {
     }
 
     public void addPartyMember(UUID leader, UUID member) {
-        this.parties.getOrDefault(leader, null).getMembers().add(member);
+        PartyData partyData = this.parties.getOrDefault(leader, null);
+        if (partyData == null) return;
+        if (partyData.getMembers().contains(member)) return;
+
+        partyData.getMembers().add(member);
     }
 
     public void removePartyMember(UUID leader, UUID member) {
-        this.parties.getOrDefault(leader, null).getMembers().remove(member);
+        PartyData partyData = this.parties.getOrDefault(leader, null);
+        if (partyData == null) return;
+
+        partyData.getMembers().remove(member);
     }
 
     public boolean isMemberOfParty(UUID uuid) {

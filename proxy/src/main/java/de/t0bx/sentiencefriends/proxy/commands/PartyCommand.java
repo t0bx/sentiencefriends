@@ -40,6 +40,7 @@ public class PartyCommand implements SimpleCommand {
         String[] args = invocation.arguments();
         if (args.length == 0) {
             this.handleHelp(player);
+            return;
         }
 
         switch (args[0].toLowerCase()) {
@@ -92,10 +93,10 @@ public class PartyCommand implements SimpleCommand {
                     return;
                 }
 
-                this.partyManager.addPartyMember(player.getUniqueId(), target.getUniqueId());
+                this.partyManager.addPartyMember(target.getUniqueId(), player.getUniqueId());
                 player.sendMessage(this.miniMessage.deserialize(this.prefix + "<green>You have joined the party of " + playerName + "."));
 
-                for (UUID uuid : this.partyManager.getPartyMembers(target.getUniqueId())) {
+                for (UUID uuid : partyData.getMembers()) {
                     if (uuid.equals(player.getUniqueId())) continue;
 
                     this.proxyServer.getPlayer(uuid).ifPresent(member -> {
@@ -173,7 +174,7 @@ public class PartyCommand implements SimpleCommand {
                 this.partyManager.removePartyMember(player.getUniqueId(), target.getUniqueId());
                 player.sendMessage(this.miniMessage.deserialize(this.prefix + "<green>You have kicked " + playerName + " from your party."));
 
-                for (UUID uuid : this.partyManager.getPartyMembers(target.getUniqueId())) {
+                for (UUID uuid : partyData.getMembers()) {
                     if (uuid.equals(player.getUniqueId())) continue;
 
                     this.proxyServer.getPlayer(uuid).ifPresent(member -> {
@@ -309,8 +310,9 @@ public class PartyCommand implements SimpleCommand {
                     return;
                 }
 
-                if (!this.partyManager.isMemberOfParty(player.getUniqueId()) || !this.partyManager.isPartyLeader(player.getUniqueId())) {
+                if (!this.partyManager.isMemberOfParty(player.getUniqueId()) && !this.partyManager.isPartyLeader(player.getUniqueId())) {
                     player.sendMessage(this.miniMessage.deserialize(this.prefix + "<red>You are not in a party."));
+                    return;
                 }
 
                 boolean isLeader = this.partyManager.isPartyLeader(player.getUniqueId());
@@ -319,9 +321,16 @@ public class PartyCommand implements SimpleCommand {
                         : this.partyManager.getPartyByMember(player.getUniqueId());
 
                 player.sendMessage(this.miniMessage.deserialize(this.prefix + "<green>Party members (" + partyData.getMembers().size() + "):"));
+                player.sendMessage(this.miniMessage.deserialize(this.prefix + "<green>--------------------------------"));
+
+                if (isLeader) {
+                    player.sendMessage(this.miniMessage.deserialize(this.prefix + "<green>Party Leader: " + player.getUsername()));
+                } else {
+                    player.sendMessage(this.miniMessage.deserialize(this.prefix + "<green>Party Leader: " + this.proxyServer.getPlayer(partyData.getLeader()).get().getUsername()));
+                }
                 for (UUID uuid : partyData.getMembers()) {
                     this.proxyServer.getPlayer(uuid).ifPresent(member -> {
-                       player.sendMessage(this.miniMessage.deserialize(this.prefix + "<green>" + member.getUsername() + (isLeader ? " (Leader)" : "")));
+                       player.sendMessage(this.miniMessage.deserialize(this.prefix + "<green>" + member.getUsername()));
                     });
                 }
             }
