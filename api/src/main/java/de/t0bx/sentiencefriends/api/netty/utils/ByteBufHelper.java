@@ -1,5 +1,6 @@
 package de.t0bx.sentiencefriends.api.netty.utils;
 
+import de.t0bx.sentiencefriends.api.data.FriendsData;
 import io.netty.buffer.ByteBuf;
 
 import java.nio.charset.StandardCharsets;
@@ -76,5 +77,63 @@ public class ByteBufHelper {
             list.add(reader.apply(buf));
         }
         return list;
+    }
+
+    public static void writeFriendsData(ByteBuf buf, FriendsData data) {
+        ByteBufHelper.writeUUID(buf, data.uuid);
+
+        buf.writeBoolean(data.getSettings().isRequestsEnabled());
+        buf.writeBoolean(data.getSettings().isNotificationsEnabled());
+        buf.writeBoolean(data.getSettings().isJumpEnabled());
+
+        ByteBufHelper.writeVarInt(buf, data.getFriends().size());
+        for (FriendsData.Friend friend : data.getFriends().values()) {
+            ByteBufHelper.writeUUID(buf, friend.getUuid());
+            ByteBufHelper.writeString(buf, friend.getCachedName() == null ? "" : friend.getCachedName());
+            buf.writeLong(friend.getSince());
+            buf.writeLong(friend.getLastOnline());
+            buf.writeBoolean(friend.isFavorite());
+            buf.writeBoolean(friend.isOnline());
+        }
+
+        ByteBufHelper.writeList(buf, data.getIncomingRequests(), ByteBufHelper::writeUUID);
+
+        ByteBufHelper.writeList(buf, data.getOutgoingRequests(), ByteBufHelper::writeUUID);
+    }
+
+    public static FriendsData readFriendsData(ByteBuf buf) {
+        UUID uuid = ByteBufHelper.readUUID(buf);
+        FriendsData data = new FriendsData(uuid);
+
+        FriendsData.Settings settings = data.getSettings();
+        settings.setRequestsEnabled(buf.readBoolean());
+        settings.setNotificationsEnabled(buf.readBoolean());
+        settings.setJumpEnabled(buf.readBoolean());
+
+        int friendsSize = ByteBufHelper.readVarInt(buf);
+        for (int i = 0; i < friendsSize; i++) {
+            UUID friendUuid = ByteBufHelper.readUUID(buf);
+            String cachedName = ByteBufHelper.readString(buf);
+            if (cachedName.isEmpty()) cachedName = null;
+            long since = buf.readLong();
+            long lastOnline = buf.readLong();
+            boolean favorite = buf.readBoolean();
+            boolean online = buf.readBoolean();
+
+            FriendsData.Friend friend = new FriendsData.Friend(friendUuid, cachedName, since);
+            friend.setLastOnline(lastOnline);
+            friend.setFavorite(favorite);
+            friend.setOnline(online);
+
+            data.getFriends().put(friendUuid, friend);
+        }
+
+        List<UUID> incoming = ByteBufHelper.readList(buf, ByteBufHelper::readUUID);
+        data.getIncomingRequests().addAll(incoming);
+
+        List<UUID> outgoing = ByteBufHelper.readList(buf, ByteBufHelper::readUUID);
+        data.getOutgoingRequests().addAll(outgoing);
+
+        return data;
     }
 }

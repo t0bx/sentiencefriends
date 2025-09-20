@@ -19,6 +19,7 @@ import de.t0bx.sentiencefriends.proxy.friends.FriendsManager;
 import de.t0bx.sentiencefriends.proxy.listener.PartyServerSwitchListener;
 import de.t0bx.sentiencefriends.proxy.listener.PlayerDisconnectListener;
 import de.t0bx.sentiencefriends.proxy.listener.PreLoginListener;
+import de.t0bx.sentiencefriends.proxy.netty.MasterNettyManager;
 import de.t0bx.sentiencefriends.proxy.party.PartyManager;
 import lombok.Getter;
 import lombok.Setter;
@@ -51,6 +52,8 @@ public class ProxyPlugin {
     private final String partyPrefix = "<gradient:#aa00aa:#ff55ff>Party <dark_gray>» <gray>";
 
     private final Set<String> blockedServers;
+
+    private final MasterNettyManager nettyManager;
 
     @Setter
     private boolean isShutdown;
@@ -88,6 +91,8 @@ public class ProxyPlugin {
         this.friendsManager = new FriendsManager(this);
         this.partyManager = new PartyManager(this.proxyServer);
         this.blockedServers = new HashSet<>();
+
+        this.nettyManager = new MasterNettyManager(1337);
     }
 
     @Subscribe

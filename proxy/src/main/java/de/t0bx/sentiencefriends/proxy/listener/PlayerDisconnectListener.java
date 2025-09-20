@@ -5,7 +5,7 @@ import com.velocitypowered.api.event.connection.DisconnectEvent;
 import com.velocitypowered.api.proxy.Player;
 import com.velocitypowered.api.proxy.ProxyServer;
 import de.t0bx.sentiencefriends.proxy.ProxyPlugin;
-import de.t0bx.sentiencefriends.proxy.friends.FriendsData;
+import de.t0bx.sentiencefriends.proxy.friends.FriendsDataImpl;
 import de.t0bx.sentiencefriends.proxy.friends.FriendsManager;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
@@ -38,7 +38,7 @@ public class PlayerDisconnectListener {
         final String name = player.getUsername();
         final long lastOnline = System.currentTimeMillis();
 
-        final FriendsData self = this.friendsManager.get(uuid);
+        final FriendsDataImpl self = this.friendsManager.get(uuid);
         if (self == null) return;
 
         final Set<UUID> friendIds = new HashSet<>(self.getFriends().keySet());
@@ -48,15 +48,15 @@ public class PlayerDisconnectListener {
 
         for (UUID friendId : friendIds) {
             this.proxyServer.getPlayer(friendId).ifPresent(friend -> {
-                final FriendsData.Friend selfRelation = self.getFriends().getOrDefault(friendId, null);
+                final FriendsDataImpl.Friend selfRelation = self.getFriends().getOrDefault(friendId, null);
                 if (selfRelation != null) {
                     selfRelation.setOnline(false);
                 }
 
-                final FriendsData friendData = this.friendsManager.get(friendId);
+                final FriendsDataImpl friendData = this.friendsManager.get(friendId);
                 if (friendData == null) return;
 
-                FriendsData.Friend relation = friendData.getFriends().get(uuid);
+                FriendsDataImpl.Friend relation = friendData.getFriends().get(uuid);
                 if (relation != null) {
                     relation.setOnline(false);
                     relation.setLastOnline(lastOnline);

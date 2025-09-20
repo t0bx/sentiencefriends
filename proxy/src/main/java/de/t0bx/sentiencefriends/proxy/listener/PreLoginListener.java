@@ -4,7 +4,7 @@ import com.velocitypowered.api.event.Subscribe;
 import com.velocitypowered.api.event.connection.PreLoginEvent;
 import com.velocitypowered.api.proxy.ProxyServer;
 import de.t0bx.sentiencefriends.proxy.ProxyPlugin;
-import de.t0bx.sentiencefriends.proxy.friends.FriendsData;
+import de.t0bx.sentiencefriends.proxy.friends.FriendsDataImpl;
 import de.t0bx.sentiencefriends.proxy.friends.FriendsManager;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
@@ -41,7 +41,7 @@ public class PreLoginListener {
             }
 
             this.friendsManager.loadFriends(uuid).thenAccept(loaded -> {
-                final FriendsData self = this.friendsManager.get(uuid);
+                final FriendsDataImpl self = this.friendsManager.get(uuid);
                 if (self == null) return;
 
                 final Set<UUID> friendIds = new HashSet<>(self.getFriends().keySet());
@@ -53,15 +53,15 @@ public class PreLoginListener {
                 this.proxyServer.getScheduler().buildTask(this.plugin, () -> {
                     for (UUID friendId : friendIds) {
                         this.proxyServer.getPlayer(friendId).ifPresent(player -> {
-                            final FriendsData.Friend selfRelation = self.getFriends().getOrDefault(friendId, null);
+                            final FriendsDataImpl.Friend selfRelation = self.getFriends().getOrDefault(friendId, null);
                             if (selfRelation != null) {
                                 selfRelation.setOnline(true);
                             }
 
-                            final FriendsData friendData = this.friendsManager.get(friendId);
+                            final FriendsDataImpl friendData = this.friendsManager.get(friendId);
                             if (friendData == null) return;
 
-                            final FriendsData.Friend relation = friendData.getFriends().get(uuid);
+                            final FriendsDataImpl.Friend relation = friendData.getFriends().get(uuid);
                             if (relation != null) {
                                 relation.setCachedName(name);
                                 relation.setOnline(true);

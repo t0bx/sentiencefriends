@@ -15,7 +15,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class FriendsManager {
 
-    private final Map<UUID, FriendsData> cachedFriends = new ConcurrentHashMap<>();
+    private final Map<UUID, FriendsDataImpl> cachedFriends = new ConcurrentHashMap<>();
     private final IMySQLManager mySQLManager;
     private final ProxyPlugin plugin;
     private final Logger logger;
@@ -28,7 +28,7 @@ public class FriendsManager {
 
     public CompletableFuture<Void> loadFriends(UUID uuid) {
         return this.mySQLManager.transactionAsync(connection -> {
-            FriendsData friendsData = new FriendsData(uuid);
+            FriendsDataImpl friendsDataImpl = new FriendsDataImpl(uuid);
 
             final String query = """
                     SELECT 'friend' AS dataset,
@@ -89,7 +89,7 @@ public class FriendsManager {
 
                         switch (dataset) {
                             case "friend" -> {
-                                FriendsData.Friend friend = new FriendsData.Friend(
+                                FriendsDataImpl.Friend friend = new FriendsDataImpl.Friend(
                                         UUID.fromString(resultSet.getString("id")),
                                         resultSet.getString("cached_name"),
                                         resultSet.getLong("since")
@@ -97,36 +97,36 @@ public class FriendsManager {
 
                                 friend.setLastOnline(resultSet.getLong("last_online"));
                                 friend.setFavorite(resultSet.getBoolean("favorite"));
-                                friendsData.getFriends().put(friend.getUuid(), friend);
+                                friendsDataImpl.getFriends().put(friend.getUuid(), friend);
                             }
 
                             case "request" -> {
                                 UUID requestId = UUID.fromString(resultSet.getString("id"));
                                 String type = resultSet.getString("req_type");
                                 if (type.equalsIgnoreCase("incoming")) {
-                                    friendsData.getIncomingRequests().add(requestId);
+                                    friendsDataImpl.getIncomingRequests().add(requestId);
                                 } else {
-                                    friendsData.getOutgoingRequests().add(requestId);
+                                    friendsDataImpl.getOutgoingRequests().add(requestId);
                                 }
                             }
 
                             case "settings" -> {
-                                friendsData.getSettings().setRequestsEnabled(resultSet.getBoolean("friend_requests_enabled"));
-                                friendsData.getSettings().setNotificationsEnabled(resultSet.getBoolean("notifications_enabled"));
-                                friendsData.getSettings().setJumpEnabled(resultSet.getBoolean("jump_enabled"));
+                                friendsDataImpl.getSettings().setRequestsEnabled(resultSet.getBoolean("friend_requests_enabled"));
+                                friendsDataImpl.getSettings().setNotificationsEnabled(resultSet.getBoolean("notifications_enabled"));
+                                friendsDataImpl.getSettings().setJumpEnabled(resultSet.getBoolean("jump_enabled"));
                             }
                         }
                     }
                 }
 
-                this.cachedFriends.put(uuid, friendsData);
+                this.cachedFriends.put(uuid, friendsDataImpl);
             } catch (SQLException exception) {
                 this.logger.error("Error while loading friends data for player {}", uuid, exception);
             }
         });
     }
 
-    public FriendsData get(UUID uuid) {
+    public FriendsDataImpl get(UUID uuid) {
         return this.cachedFriends.getOrDefault(uuid, null);
     }
 
@@ -137,7 +137,7 @@ public class FriendsManager {
     }
 
     public void create(UUID uuid) {
-        this.cachedFriends.put(uuid, new FriendsData(uuid));
+        this.cachedFriends.put(uuid, new FriendsDataImpl(uuid));
 
         this.mySQLManager.updateAsync("""
                 INSERT INTO friends_settings (uuid)

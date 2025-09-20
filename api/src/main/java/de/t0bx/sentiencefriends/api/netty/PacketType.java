@@ -9,7 +9,9 @@ import java.util.Map;
 import java.util.function.Supplier;
 
 public enum PacketType {
-    CHANNEL_IDENTIFY_PACKET(1, ChannelIdentifyPacket::new);
+    CHANNEL_IDENTIFY_PACKET(1, ChannelIdentifyPacket::new),
+    REQUEST_FRIENDS_PACKET(2, RequestFriendsPacket::new),
+    RECEIVE_FRIENDS_PACKET(3, ReceiveFriendsPacket::new);
 
 
     @Getter

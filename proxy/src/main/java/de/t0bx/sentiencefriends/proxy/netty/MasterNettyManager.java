@@ -80,6 +80,35 @@ public class MasterNettyManager {
         }
     }
 
+    public void shutdown() {
+        logger.info("Netty server shutting down...");
+
+        for (Channel channel : channels.values()) {
+            if (channel.isOpen()) {
+                channel.close();
+            }
+        }
+
+        if (serverChannel != null && serverChannel.isOpen()) {
+            try {
+                serverChannel.close().sync();
+                logger.info("Server channel closed");
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                logger.warn("Interrupted while closing server channel", e);
+            }
+        }
+
+        try {
+            if (bossGroup != null) bossGroup.shutdownGracefully().sync();
+            if (workerGroup != null) workerGroup.shutdownGracefully().sync();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+
+        logger.info("Netty shutdown complete");
+    }
+
     public void addChannel(String channelName, Channel channel) {
         this.channels.put(channelName, channel);
     }
