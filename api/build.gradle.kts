@@ -14,7 +14,7 @@ dependencies {
     annotationProcessor("org.projectlombok:lombok:1.18.32")
 
     // https://mvnrepository.com/artifact/io.netty/netty-all
-    implementation("io.netty:netty-all:4.2.3.Final")
+    compileOnly("io.netty:netty-all:4.2.3.Final")
 }
 
 java {

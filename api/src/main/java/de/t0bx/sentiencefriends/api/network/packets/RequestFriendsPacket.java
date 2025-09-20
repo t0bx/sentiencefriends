@@ -4,9 +4,11 @@ import de.t0bx.sentiencefriends.api.netty.PacketType;
 import de.t0bx.sentiencefriends.api.netty.utils.ByteBufHelper;
 import de.t0bx.sentiencefriends.api.network.FriendsPacket;
 import io.netty.buffer.ByteBuf;
+import lombok.Getter;
 
 import java.util.UUID;
 
+@Getter
 public class RequestFriendsPacket implements FriendsPacket {
 
     private String channelName;
