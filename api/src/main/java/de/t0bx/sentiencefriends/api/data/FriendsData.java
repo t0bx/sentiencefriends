@@ -44,6 +44,15 @@ public class FriendsData {
 
         public String getLastOnlineTime() {
             long diff = System.currentTimeMillis() - this.lastOnline;
+            return formatted(diff);
+        }
+
+        public String getSinceFormatted() {
+            long diff = System.currentTimeMillis() - this.since;
+            return formatted(diff);
+        }
+
+        private String formatted(long diff) {
             if (diff < 0) diff = 0;
 
             long seconds = diff / 1000;

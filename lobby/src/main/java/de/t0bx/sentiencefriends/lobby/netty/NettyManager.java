@@ -2,6 +2,7 @@ package de.t0bx.sentiencefriends.lobby.netty;
 
 import de.t0bx.sentiencefriends.api.netty.codec.PacketDecoder;
 import de.t0bx.sentiencefriends.api.netty.codec.PacketEncoder;
+import de.t0bx.sentiencefriends.api.network.packets.ChannelIdentifyPacket;
 import de.t0bx.sentiencefriends.lobby.LobbyPlugin;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.*;
@@ -67,6 +68,7 @@ public class NettyManager {
         this.channel = future.channel();
 
         LobbyPlugin.getInstance().getLogger().info("Connected to master server.");
+        this.channel.writeAndFlush(new ChannelIdentifyPacket(LobbyPlugin.getInstance().getChannelName()));
     }
 
     public void close() {

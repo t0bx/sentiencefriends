@@ -6,35 +6,29 @@ import de.t0bx.sentiencefriends.api.network.FriendsPacket;
 import io.netty.buffer.ByteBuf;
 import lombok.Getter;
 
-import java.util.UUID;
-
 @Getter
-public class RequestFriendsPacket implements FriendsPacket {
+public class ChannelIdentifyPacket implements FriendsPacket {
 
     private String channelName;
-    private UUID uuid;
 
-    public RequestFriendsPacket() {}
+    public ChannelIdentifyPacket() {}
 
-    public RequestFriendsPacket(String channelName, UUID uuid) {
+    public ChannelIdentifyPacket(String channelName) {
         this.channelName = channelName;
-        this.uuid = uuid;
     }
 
     @Override
     public void read(ByteBuf buf) {
         this.channelName = ByteBufHelper.readString(buf);
-        this.uuid = ByteBufHelper.readUUID(buf);
     }
 
     @Override
     public void write(ByteBuf buf) {
         ByteBufHelper.writeString(buf, channelName);
-        ByteBufHelper.writeUUID(buf, uuid);
     }
 
     @Override
     public int getId() {
-        return PacketType.REQUEST_FRIENDS_PACKET.getId();
+        return PacketType.CHANNEL_IDENTIFY_PACKET.getId();
     }
 }

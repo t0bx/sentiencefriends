@@ -3,9 +3,11 @@ package de.t0bx.sentiencefriends.lobby.listener;
 import de.t0bx.sentiencefriends.api.network.packets.RequestFriendsPacket;
 import de.t0bx.sentiencefriends.lobby.LobbyPlugin;
 import de.t0bx.sentiencefriends.lobby.netty.NettyManager;
+import de.t0bx.sentiencefriends.lobby.utils.ItemProvider;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerLoginEvent;
 
 public class PlayerJoinListener implements Listener {
@@ -23,5 +25,14 @@ public class PlayerJoinListener implements Listener {
         this.nettyManager.getChannel().writeAndFlush(
                 new RequestFriendsPacket(LobbyPlugin.getInstance().getChannelName(), player.getUniqueId())
         );
+        System.out.println("Sent RequestFriendsPacket");
+    }
+
+    @EventHandler
+    public void onPlayerJoin(PlayerJoinEvent event) {
+        final Player player = event.getPlayer();
+
+        player.getInventory().clear();
+        player.getInventory().setItem(8, ItemProvider.createPlayerSkull(player.getName()).setName("<gray>» <green>Friends <gray>«").build());
     }
 }

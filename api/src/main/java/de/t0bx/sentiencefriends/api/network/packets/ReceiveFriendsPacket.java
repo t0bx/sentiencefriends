@@ -31,8 +31,6 @@ public class ReceiveFriendsPacket implements FriendsPacket {
 
     @Override
     public void write(ByteBuf buf) {
-        ByteBufHelper.writeVarInt(buf, getId());
-
         ByteBufHelper.writeUUID(buf, uuid);
         ByteBufHelper.writeFriendsData(buf, friendsData);
     }

@@ -92,7 +92,7 @@ public class ProxyPlugin {
         this.partyManager = new PartyManager(this.proxyServer);
         this.blockedServers = new HashSet<>();
 
-        this.nettyManager = new MasterNettyManager(1337);
+        this.nettyManager = new MasterNettyManager(1339);
     }
 
     @Subscribe
@@ -108,6 +108,7 @@ public class ProxyPlugin {
     public void onProxyShutdown(ProxyShutdownEvent event) {
         try {
             this.setShutdown(true);
+            this.nettyManager.shutdown();
 
             if (this.mySQLManager != null && !this.mySQLManager.getConnection().isClosed()) {
                 this.mySQLManager.disconnect();

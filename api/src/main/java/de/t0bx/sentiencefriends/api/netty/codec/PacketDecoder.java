@@ -17,15 +17,18 @@ public class PacketDecoder extends ByteToMessageDecoder {
     protected void decode(ChannelHandlerContext channelHandlerContext, ByteBuf byteBuf, List<Object> out) throws Exception {
         try {
             if (byteBuf.readableBytes() < 4) return;
+            System.out.println("Packet Incoming decoder");
 
             byteBuf.markReaderIndex();
             int packetId = ByteBufHelper.readVarInt(byteBuf);
+            System.out.println("Packet ID: " + packetId);
             PacketType packetType = PacketType.getById(packetId);
             if (packetType == null) {
                 byteBuf.resetReaderIndex();
                 return;
             }
 
+            System.out.println("Packet Type: " + packetType.name());
             FriendsPacket packet = packetType.createPacket();
             packet.read(byteBuf);
             out.add(packet);
