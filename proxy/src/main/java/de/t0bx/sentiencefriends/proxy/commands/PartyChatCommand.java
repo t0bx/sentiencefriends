@@ -50,7 +50,7 @@ public class PartyChatCommand implements SimpleCommand {
                 ? this.partyManager.getParty(player.getUniqueId())
                 : this.partyManager.getPartyByMember(player.getUniqueId());
 
-        if (!partyData.isChatDisabled()) {
+        if (partyData.isChatDisabled()) {
             player.sendMessage(this.miniMessage.deserialize(this.prefix + "<red>The party chat is currently disabled."));
             return;
         }

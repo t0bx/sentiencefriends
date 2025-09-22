@@ -25,7 +25,6 @@ public class PlayerJoinListener implements Listener {
         this.nettyManager.getChannel().writeAndFlush(
                 new RequestFriendsPacket(LobbyPlugin.getInstance().getChannelName(), player.getUniqueId())
         );
-        System.out.println("Sent RequestFriendsPacket");
     }
 
     @EventHandler

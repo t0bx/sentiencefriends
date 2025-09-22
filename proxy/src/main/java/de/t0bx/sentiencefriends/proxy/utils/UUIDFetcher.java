@@ -50,7 +50,7 @@ public class UUIDFetcher {
      */
     public static UUID getUUID(String name) throws Exception {
         if (name == null || name.isEmpty()) {
-            throw new IllegalArgumentException("Name darf nicht null oder leer sein");
+            throw new IllegalArgumentException("Name cannot be null or empty!");
         }
 
         if (NAME_UUID_CACHE.containsKey(name)) {
@@ -82,7 +82,7 @@ public class UUIDFetcher {
             try {
                 return getUUID(name);
             } catch (Exception e) {
-                throw new RuntimeException("Fehler beim Abrufen der UUID für " + name, e);
+                throw new RuntimeException("Failed to fetch uuid for " + name, e);
             }
         }, EXECUTOR);
     }
@@ -115,7 +115,7 @@ public class UUIDFetcher {
                 return uuid;
             }
         } else {
-            throw new Exception("Konnte UUID für Java-Spieler nicht abrufen: HTTP " + connection.getResponseCode());
+            throw new Exception("Couldn't fetch java uuid " + connection.getResponseCode());
         }
     }
 
@@ -144,7 +144,7 @@ public class UUIDFetcher {
                 return uuid;
             }
         } else {
-            throw new Exception("Konnte UUID für Bedrock-Spieler nicht abrufen: HTTP " + connection.getResponseCode());
+            throw new Exception("Couldn't fetch bedrock uuid " + connection.getResponseCode());
         }
     }
 }

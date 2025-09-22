@@ -3,6 +3,7 @@ package de.t0bx.sentiencefriends.proxy.listener;
 import com.velocitypowered.api.event.Subscribe;
 import com.velocitypowered.api.event.connection.PreLoginEvent;
 import com.velocitypowered.api.proxy.ProxyServer;
+import de.t0bx.sentiencefriends.api.network.packets.ReceiveFriendsPacket;
 import de.t0bx.sentiencefriends.proxy.ProxyPlugin;
 import de.t0bx.sentiencefriends.proxy.friends.FriendsDataImpl;
 import de.t0bx.sentiencefriends.proxy.friends.FriendsManager;
@@ -12,6 +13,7 @@ import net.kyori.adventure.text.minimessage.MiniMessage;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 public class PreLoginListener {
 

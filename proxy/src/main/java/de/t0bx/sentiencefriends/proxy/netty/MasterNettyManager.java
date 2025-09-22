@@ -2,6 +2,7 @@ package de.t0bx.sentiencefriends.proxy.netty;
 
 import de.t0bx.sentiencefriends.api.netty.codec.PacketDecoder;
 import de.t0bx.sentiencefriends.api.netty.codec.PacketEncoder;
+import de.t0bx.sentiencefriends.api.netty.codec.VarIntFrameDecoder;
 import de.t0bx.sentiencefriends.api.network.FriendsPacket;
 import de.t0bx.sentiencefriends.proxy.ProxyPlugin;
 import io.netty.bootstrap.ServerBootstrap;
@@ -61,9 +62,10 @@ public class MasterNettyManager {
                         @Override
                         protected void initChannel(SocketChannel ch) throws Exception {
                             ChannelPipeline pipeline = ch.pipeline();
-                            pipeline.addLast(new PacketDecoder());
-                            pipeline.addLast(new PacketEncoder());
-                            pipeline.addLast(new PacketHandler());
+                            pipeline.addLast("varint-frame", new VarIntFrameDecoder());
+                            pipeline.addLast("packet-decoder", new PacketDecoder());
+                            pipeline.addLast("packet-encoder", new PacketEncoder());
+                            pipeline.addLast("packet-handler", new PacketHandler());
                         }
                     });
 

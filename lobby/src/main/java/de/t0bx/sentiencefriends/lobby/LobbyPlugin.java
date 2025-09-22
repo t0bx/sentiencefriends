@@ -26,6 +26,8 @@ public class LobbyPlugin extends JavaPlugin {
 
     private final String channelName = this.getRandomChannelIdentifier();
 
+    private final String prefix = "<gradient:#00aaaa:#55ffff>Friends <dark_gray>» <gray>";
+
     @Override
     public void onEnable() {
         instance = this;
@@ -33,7 +35,7 @@ public class LobbyPlugin extends JavaPlugin {
         this.friendsManager = new FriendsManager();
         this.nettyManager = new NettyManager("localhost", 1339);
 
-        this.inventoryProvider = new InventoryProvider();
+        this.inventoryProvider = new InventoryProvider(this.friendsManager);
 
         registerListener();
 
@@ -46,6 +48,8 @@ public class LobbyPlugin extends JavaPlugin {
         pluginManager.registerEvents(new PlayerJoinListener(this.nettyManager), this);
         pluginManager.registerEvents(new PlayerQuitListener(this.friendsManager), this);
         pluginManager.registerEvents(new PlayerInteractListener(this.inventoryProvider, this.friendsManager), this);
+
+        this.inventoryProvider.registerListeners(this, pluginManager, this.nettyManager, this.friendsManager);
     }
 
     @Override

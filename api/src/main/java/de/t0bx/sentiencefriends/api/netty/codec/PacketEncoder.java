@@ -12,14 +12,21 @@ import java.util.logging.Level;
 public class PacketEncoder extends MessageToByteEncoder<FriendsPacket> {
 
     @Override
-    protected void encode(ChannelHandlerContext channelHandlerContext, FriendsPacket friendsPacket, ByteBuf byteBuf) throws Exception {
+    protected void encode(ChannelHandlerContext ctx, FriendsPacket packet, ByteBuf out) throws Exception {
         try {
-            ByteBufHelper.writeVarInt(byteBuf, friendsPacket.getId());
-            friendsPacket.write(byteBuf);
-        } catch (Exception exception) {
-            PacketController.getInstance().getLogger().log(Level.SEVERE, "Failed to write packet '" + friendsPacket.getClass().getSimpleName() + "':" + exception);
 
-            channelHandlerContext.close();
+            ByteBuf payload = ctx.alloc().buffer();
+            ByteBufHelper.writeVarInt(payload, packet.getId());
+            packet.write(payload);
+
+            int len = payload.readableBytes();
+            ByteBufHelper.writeVarInt(out, len);
+            out.writeBytes(payload);
+            payload.release();
+        } catch (Exception exception) {
+            PacketController.getInstance().getLogger().log(Level.SEVERE, "Failed to write packet '" + packet.getClass().getSimpleName() + "':" + exception);
+
+            ctx.close();
             throw exception;
         }
     }

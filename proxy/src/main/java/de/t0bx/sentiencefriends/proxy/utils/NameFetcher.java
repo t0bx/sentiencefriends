@@ -39,7 +39,7 @@ public class NameFetcher {
      * @throws Exception If an error occurs during the retrieval of*/
     public static String getName(UUID uuid) throws Exception {
         if (uuid == null) {
-            throw new IllegalArgumentException("UUID darf nicht null sein");
+            throw new IllegalArgumentException("UUID cannot be null");
         }
 
         if (UUID_NAME_CACHE.containsKey(uuid)) {
@@ -68,14 +68,14 @@ public class NameFetcher {
             try {
                 return getName(uuid);
             } catch (Exception e) {
-                throw new RuntimeException("Fehler beim Abrufen des Namens für UUID " + uuid, e);
+                throw new RuntimeException("Failed to get name for " + uuid, e);
             }
         }, EXECUTOR);
     }
 
     public static CompletableFuture<List<String>> getNamesAsync(List<UUID> uuids) {
         if (uuids == null) {
-            return CompletableFuture.failedFuture(new IllegalArgumentException("UUID-Liste darf nicht null sein"));
+            return CompletableFuture.failedFuture(new IllegalArgumentException("list cannot be null"));
         }
 
         List<CompletableFuture<String>> perUuid = uuids.stream()
@@ -123,7 +123,7 @@ public class NameFetcher {
                 return name;
             }
         } else {
-            throw new Exception("Konnte Namen für Java-Spieler nicht abrufen: HTTP " + connection.getResponseCode());
+            throw new Exception("Couldn't fetch java name " + connection.getResponseCode());
         }
     }
 
@@ -150,7 +150,7 @@ public class NameFetcher {
                 return "." + name;
             }
         } else {
-            throw new Exception("Konnte Namen für Bedrock-Spieler nicht abrufen: HTTP " + connection.getResponseCode());
+            throw new Exception("Couldn't fetch bedrock name " + connection.getResponseCode());
         }
     }
 }

@@ -86,8 +86,9 @@ public class ByteBufHelper {
         buf.writeBoolean(data.getSettings().isNotificationsEnabled());
         buf.writeBoolean(data.getSettings().isJumpEnabled());
 
-        ByteBufHelper.writeVarInt(buf, data.getFriends().size());
-        for (FriendsData.Friend friend : data.getFriends().values()) {
+        List<FriendsData.Friend> snapshot = new ArrayList<>(data.getFriends().values());
+        ByteBufHelper.writeVarInt(buf, snapshot.size());
+        for (FriendsData.Friend friend : snapshot) {
             ByteBufHelper.writeUUID(buf, friend.getUuid());
             ByteBufHelper.writeString(buf, friend.getCachedName() == null ? "" : friend.getCachedName());
             buf.writeLong(friend.getSince());
@@ -96,9 +97,11 @@ public class ByteBufHelper {
             buf.writeBoolean(friend.isOnline());
         }
 
-        ByteBufHelper.writeList(buf, data.getIncomingRequests(), ByteBufHelper::writeUUID);
+        List<UUID> inSnap = new ArrayList<>(data.getIncomingRequests());
+        writeList(buf, inSnap, ByteBufHelper::writeUUID);
 
-        ByteBufHelper.writeList(buf, data.getOutgoingRequests(), ByteBufHelper::writeUUID);
+        List<UUID> outSnap = new ArrayList<>(data.getOutgoingRequests());
+        writeList(buf, outSnap, ByteBufHelper::writeUUID);
     }
 
     public static FriendsData readFriendsData(ByteBuf buf) {

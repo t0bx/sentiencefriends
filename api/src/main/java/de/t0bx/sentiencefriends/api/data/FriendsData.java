@@ -91,5 +91,14 @@ public class FriendsData {
         SettingType(String key) {
             this.key = key;
         }
+
+        public static SettingType fromKey(String key) {
+            for (SettingType type : values()) {
+                if (type.getKey().equals(key)) {
+                    return type;
+                }
+            }
+            return null;
+        }
     }
 }

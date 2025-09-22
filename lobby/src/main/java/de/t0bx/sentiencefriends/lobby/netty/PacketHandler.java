@@ -11,7 +11,6 @@ public class PacketHandler extends SimpleChannelInboundHandler<FriendsPacket> {
     @Override
     protected void channelRead0(ChannelHandlerContext channelHandlerContext, FriendsPacket friendsPacket) throws Exception {
         if (friendsPacket instanceof ReceiveFriendsPacket receiveFriendsPacket) {
-            System.out.println("Received friends data from " + receiveFriendsPacket.getUuid());
             LobbyPlugin.getInstance().getFriendsManager().getFriendsData().put(
                     receiveFriendsPacket.getUuid(),
                     receiveFriendsPacket.getFriendsData()

@@ -15,10 +15,17 @@ dependencies {
 
     // https://mvnrepository.com/artifact/io.netty/netty-all
     compileOnly("io.netty:netty-all:4.2.3.Final")
+
+    testImplementation("org.junit.jupiter:junit-jupiter:5.11.0")
+    testImplementation("io.netty:netty-all:4.2.3.Final")
 }
 
 java {
     toolchain {
         languageVersion.set(JavaLanguageVersion.of(21))
     }
+}
+
+tasks.test {
+    useJUnitPlatform()
 }

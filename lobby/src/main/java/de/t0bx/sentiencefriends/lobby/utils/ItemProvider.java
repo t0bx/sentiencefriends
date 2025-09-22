@@ -292,7 +292,6 @@ public class ItemProvider {
                     PlayerProfile profile = Bukkit.createPlayerProfile(UUID.randomUUID());
                     PlayerTextures textures = profile.getTextures();
 
-                    // Entfernen von 'minecraft:' oder 'minecraft://' am Anfang, falls vorhanden
                     if (textureUrl.startsWith("minecraft:")) {
                         textureUrl = textureUrl.substring("minecraft:".length());
                     }

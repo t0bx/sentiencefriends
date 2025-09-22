@@ -1,21 +1,41 @@
 package de.t0bx.sentiencefriends.lobby.inventory;
 
+import de.t0bx.sentiencefriends.lobby.friends.FriendsManager;
+import de.t0bx.sentiencefriends.lobby.inventory.inventories.FriendsMenuInventory;
+import de.t0bx.sentiencefriends.lobby.inventory.inventories.FriendsSettingsInventory;
+import de.t0bx.sentiencefriends.lobby.inventory.listener.FriendsMenuListener;
+import de.t0bx.sentiencefriends.lobby.inventory.listener.FriendsSettingsListener;
+import de.t0bx.sentiencefriends.lobby.netty.NettyManager;
 import de.t0bx.sentiencefriends.lobby.utils.ItemProvider;
+import lombok.Getter;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.plugin.PluginManager;
+import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
+@Getter
 public class InventoryProvider {
     private final ConcurrentHashMap<UUID, Map<String, Inventory>> playerInventories;
 
-    public InventoryProvider() {
+    private final FriendsMenuInventory friendsMenuInventory;
+    private final FriendsSettingsInventory friendsSettingsInventory;
+
+    public InventoryProvider(FriendsManager friendsManager) {
         this.playerInventories = new ConcurrentHashMap<>();
+        this.friendsMenuInventory = new FriendsMenuInventory(this, friendsManager);
+        this.friendsSettingsInventory = new FriendsSettingsInventory(this, friendsManager);
+    }
+
+    public void registerListeners(JavaPlugin plugin, PluginManager pluginManager, NettyManager nettyManager, FriendsManager friendsManager) {
+        pluginManager.registerEvents(new FriendsMenuListener(friendsManager, this), plugin);
+        pluginManager.registerEvents(new FriendsSettingsListener(nettyManager, friendsManager, this), plugin);
     }
 
     /**
