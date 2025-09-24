@@ -12,7 +12,9 @@ public enum PacketType {
     CHANNEL_IDENTIFY_PACKET(1, ChannelIdentifyPacket::new),
     REQUEST_FRIENDS_PACKET(2, RequestFriendsPacket::new),
     RECEIVE_FRIENDS_PACKET(3, ReceiveFriendsPacket::new),
-    UPDATE_SETTINGS_PACKET(5, UpdateSettingsPacket::new);
+    UPDATE_SETTINGS_PACKET(5, UpdateSettingsPacket::new),
+    UPDATE_FRIEND_PACKET(6, UpdateFriendPacket::new),
+    REQUEST_JUMP_PACKET(7, RequestJumpPacket::new);
 
     @Getter
     private final int id;

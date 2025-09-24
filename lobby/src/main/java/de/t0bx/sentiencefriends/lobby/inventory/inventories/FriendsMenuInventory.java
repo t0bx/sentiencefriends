@@ -115,11 +115,14 @@ public class FriendsMenuInventory {
     private List<ItemStack> getOnlineFriends(UUID uuid) {
         List<ItemStack> items = new ArrayList<>();
         List<FriendsData.Friend> friends = this.friendsManager.getFriendsData()
-                .get(uuid).getFriends().values().stream().toList();
+                .get(uuid)
+                .getFriends()
+                .values()
+                .stream()
+                .filter(FriendsData.Friend::isOnline)
+                .toList();
 
         for (FriendsData.Friend friend : friends) {
-            if (!friend.isOnline()) continue;
-
             final String name = friend.getCachedName();
             final boolean favorite = friend.isFavorite();
 
@@ -142,12 +145,11 @@ public class FriendsMenuInventory {
                 .getFriends()
                 .values()
                 .stream()
+                .filter(friend -> !friend.isOnline())
                 .sorted(Comparator.comparingLong(FriendsData.Friend::getLastOnline).reversed())
                 .toList();
 
         for (FriendsData.Friend friend : friends) {
-            if (friend.isOnline()) continue;
-
             final String name = friend.getCachedName();
             final boolean favorite = friend.isFavorite();
 

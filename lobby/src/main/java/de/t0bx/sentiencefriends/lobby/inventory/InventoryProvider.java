@@ -1,8 +1,10 @@
 package de.t0bx.sentiencefriends.lobby.inventory;
 
 import de.t0bx.sentiencefriends.lobby.friends.FriendsManager;
+import de.t0bx.sentiencefriends.lobby.inventory.inventories.FriendsFriendInventory;
 import de.t0bx.sentiencefriends.lobby.inventory.inventories.FriendsMenuInventory;
 import de.t0bx.sentiencefriends.lobby.inventory.inventories.FriendsSettingsInventory;
+import de.t0bx.sentiencefriends.lobby.inventory.listener.FriendsFriendListener;
 import de.t0bx.sentiencefriends.lobby.inventory.listener.FriendsMenuListener;
 import de.t0bx.sentiencefriends.lobby.inventory.listener.FriendsSettingsListener;
 import de.t0bx.sentiencefriends.lobby.netty.NettyManager;
@@ -26,16 +28,19 @@ public class InventoryProvider {
 
     private final FriendsMenuInventory friendsMenuInventory;
     private final FriendsSettingsInventory friendsSettingsInventory;
+    private final FriendsFriendInventory friendsFriendInventory;
 
     public InventoryProvider(FriendsManager friendsManager) {
         this.playerInventories = new ConcurrentHashMap<>();
         this.friendsMenuInventory = new FriendsMenuInventory(this, friendsManager);
         this.friendsSettingsInventory = new FriendsSettingsInventory(this, friendsManager);
+        this.friendsFriendInventory = new FriendsFriendInventory(this, friendsManager);
     }
 
     public void registerListeners(JavaPlugin plugin, PluginManager pluginManager, NettyManager nettyManager, FriendsManager friendsManager) {
         pluginManager.registerEvents(new FriendsMenuListener(friendsManager, this), plugin);
         pluginManager.registerEvents(new FriendsSettingsListener(nettyManager, friendsManager, this), plugin);
+        pluginManager.registerEvents(new FriendsFriendListener(nettyManager, friendsManager, this), plugin);
     }
 
     /**

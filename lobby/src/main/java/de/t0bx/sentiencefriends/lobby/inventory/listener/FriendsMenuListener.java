@@ -1,7 +1,9 @@
 package de.t0bx.sentiencefriends.lobby.inventory.listener;
 
+import de.t0bx.sentiencefriends.api.data.FriendsData;
 import de.t0bx.sentiencefriends.lobby.friends.FriendsManager;
 import de.t0bx.sentiencefriends.lobby.inventory.InventoryProvider;
+import de.t0bx.sentiencefriends.lobby.inventory.inventories.FriendsFriendInventory;
 import de.t0bx.sentiencefriends.lobby.inventory.inventories.FriendsMenuInventory;
 import de.t0bx.sentiencefriends.lobby.inventory.inventories.FriendsSettingsInventory;
 import net.kyori.adventure.text.Component;
@@ -15,13 +17,17 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.persistence.PersistentDataType;
 
+import java.util.UUID;
+
 public class FriendsMenuListener implements Listener {
 
     private final FriendsManager friendsManager;
     private final MiniMessage miniMessage;
     private final FriendsMenuInventory friendsMenuInventory;
     private final FriendsSettingsInventory friendsSettingsInventory;
+    private final FriendsFriendInventory friendsFriendInventory;
     private final NamespacedKey pageKey;
+    private final NamespacedKey friendKey;
     private final Component friendsMenuTitle;
 
     public FriendsMenuListener(FriendsManager friendsManager, InventoryProvider inventoryProvider) {
@@ -29,7 +35,9 @@ public class FriendsMenuListener implements Listener {
         this.miniMessage = MiniMessage.miniMessage();
         this.friendsMenuInventory = inventoryProvider.getFriendsMenuInventory();
         this.friendsSettingsInventory = inventoryProvider.getFriendsSettingsInventory();
+        this.friendsFriendInventory = inventoryProvider.getFriendsFriendInventory();
         this.pageKey = new NamespacedKey("friends", "page");
+        this.friendKey = new NamespacedKey("friends", "friend");
         this.friendsMenuTitle = this.miniMessage.deserialize("<gray>» <green>Friends");
     }
 
@@ -60,6 +68,19 @@ public class FriendsMenuListener implements Listener {
         if (event.getSlot() == 53) {
             player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.5f, 1.0f);
             this.friendsSettingsInventory.open(player);
+            return;
+        }
+
+        if (event.getCurrentItem().getItemMeta().getPersistentDataContainer().has(this.friendKey, PersistentDataType.STRING)) {
+            UUID uuid = UUID.fromString(
+                    event.getCurrentItem().getItemMeta().getPersistentDataContainer().get(this.friendKey, PersistentDataType.STRING)
+            );
+
+            FriendsData.Friend friend = this.friendsManager.getFriendsData().get(player.getUniqueId()).getFriends().get(uuid);
+            if (friend == null) return;
+
+            player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.5f, 1.0f);
+            this.friendsFriendInventory.open(player, friend);
         }
     }
 }
