@@ -4,6 +4,7 @@ import com.velocitypowered.api.event.Subscribe;
 import com.velocitypowered.api.event.connection.PreLoginEvent;
 import com.velocitypowered.api.proxy.ProxyServer;
 import de.t0bx.sentiencefriends.api.network.packets.ReceiveFriendsPacket;
+import de.t0bx.sentiencefriends.api.network.packets.UpdateFriendPacket;
 import de.t0bx.sentiencefriends.proxy.ProxyPlugin;
 import de.t0bx.sentiencefriends.proxy.friends.FriendsDataImpl;
 import de.t0bx.sentiencefriends.proxy.friends.FriendsManager;
@@ -67,6 +68,9 @@ public class PreLoginListener {
                             if (relation != null) {
                                 relation.setCachedName(name);
                                 relation.setOnline(true);
+
+                                var updateFriendPacket = new UpdateFriendPacket(player.getUniqueId(), relation);
+                                ProxyPlugin.getInstance().getNettyManager().sendPacket(updateFriendPacket);
                             }
 
                             if (!friendData.getSettings().isNotificationsEnabled()) return;

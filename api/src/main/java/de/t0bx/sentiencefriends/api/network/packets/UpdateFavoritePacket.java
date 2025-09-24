@@ -9,32 +9,36 @@ import lombok.Getter;
 import java.util.UUID;
 
 @Getter
-public class RequestJumpPacket implements FriendsPacket {
+public class UpdateFavoritePacket implements FriendsPacket {
 
     private UUID player;
     private UUID target;
+    private boolean favorite;
 
-    public RequestJumpPacket() {}
+    public UpdateFavoritePacket() {}
 
-    public RequestJumpPacket(UUID player, UUID target) {
+    public UpdateFavoritePacket(UUID player, UUID target, boolean favorite) {
         this.player = player;
         this.target = target;
+        this.favorite = favorite;
     }
 
     @Override
     public void read(ByteBuf buf) {
         this.player = ByteBufHelper.readUUID(buf);
         this.target = ByteBufHelper.readUUID(buf);
+        this.favorite = buf.readBoolean();
     }
 
     @Override
     public void write(ByteBuf buf) {
         ByteBufHelper.writeUUID(buf, player);
         ByteBufHelper.writeUUID(buf, target);
+        buf.writeBoolean(favorite);
     }
 
     @Override
     public int getId() {
-        return PacketType.REQUEST_JUMP_PACKET.getId();
+        return PacketType.UPDATE_FAVORITE_PACKET.getId();
     }
 }

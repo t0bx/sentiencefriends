@@ -89,12 +89,7 @@ public class ByteBufHelper {
         List<FriendsData.Friend> snapshot = new ArrayList<>(data.getFriends().values());
         ByteBufHelper.writeVarInt(buf, snapshot.size());
         for (FriendsData.Friend friend : snapshot) {
-            ByteBufHelper.writeUUID(buf, friend.getUuid());
-            ByteBufHelper.writeString(buf, friend.getCachedName() == null ? "" : friend.getCachedName());
-            buf.writeLong(friend.getSince());
-            buf.writeLong(friend.getLastOnline());
-            buf.writeBoolean(friend.isFavorite());
-            buf.writeBoolean(friend.isOnline());
+            writeFriend(buf, friend);
         }
 
         List<UUID> inSnap = new ArrayList<>(data.getIncomingRequests());
@@ -102,6 +97,31 @@ public class ByteBufHelper {
 
         List<UUID> outSnap = new ArrayList<>(data.getOutgoingRequests());
         writeList(buf, outSnap, ByteBufHelper::writeUUID);
+    }
+
+    public static void writeFriend(ByteBuf buf, FriendsData.Friend friend) {
+        ByteBufHelper.writeUUID(buf, friend.getUuid());
+        ByteBufHelper.writeString(buf, friend.getCachedName() == null ? "" : friend.getCachedName());
+        buf.writeLong(friend.getSince());
+        buf.writeLong(friend.getLastOnline());
+        buf.writeBoolean(friend.isFavorite());
+        buf.writeBoolean(friend.isOnline());
+    }
+
+    public static FriendsData.Friend readFriend(ByteBuf buf) {
+        UUID friendUuid = ByteBufHelper.readUUID(buf);
+        String cachedName = ByteBufHelper.readString(buf);
+        if (cachedName.isEmpty()) cachedName = null;
+        long since = buf.readLong();
+        long lastOnline = buf.readLong();
+        boolean favorite = buf.readBoolean();
+        boolean online = buf.readBoolean();
+
+        FriendsData.Friend friend = new FriendsData.Friend(friendUuid, cachedName, since);
+        friend.setLastOnline(lastOnline);
+        friend.setFavorite(favorite);
+        friend.setOnline(online);
+        return friend;
     }
 
     public static FriendsData readFriendsData(ByteBuf buf) {
@@ -115,20 +135,8 @@ public class ByteBufHelper {
 
         int friendsSize = ByteBufHelper.readVarInt(buf);
         for (int i = 0; i < friendsSize; i++) {
-            UUID friendUuid = ByteBufHelper.readUUID(buf);
-            String cachedName = ByteBufHelper.readString(buf);
-            if (cachedName.isEmpty()) cachedName = null;
-            long since = buf.readLong();
-            long lastOnline = buf.readLong();
-            boolean favorite = buf.readBoolean();
-            boolean online = buf.readBoolean();
-
-            FriendsData.Friend friend = new FriendsData.Friend(friendUuid, cachedName, since);
-            friend.setLastOnline(lastOnline);
-            friend.setFavorite(favorite);
-            friend.setOnline(online);
-
-            data.getFriends().put(friendUuid, friend);
+            FriendsData.Friend friend = readFriend(buf);
+            data.getFriends().put(friend.getUuid(), friend);
         }
 
         List<UUID> incoming = ByteBufHelper.readList(buf, ByteBufHelper::readUUID);

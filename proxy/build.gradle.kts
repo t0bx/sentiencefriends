@@ -8,11 +8,13 @@ version = "1.0.0"
 
 repositories {
     mavenCentral()
+    mavenLocal()
     maven("https://repo.papermc.io/repository/maven-public/")
 }
 
 dependencies {
     compileOnly("com.velocitypowered:velocity-api:3.4.0-SNAPSHOT")
+    annotationProcessor("com.velocitypowered:velocity-api:3.4.0-SNAPSHOT")
     implementation("com.zaxxer:HikariCP:6.3.0")
 
     compileOnly("org.projectlombok:lombok:1.18.32")

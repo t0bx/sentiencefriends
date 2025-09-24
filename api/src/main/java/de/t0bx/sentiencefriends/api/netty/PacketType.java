@@ -14,7 +14,9 @@ public enum PacketType {
     RECEIVE_FRIENDS_PACKET(3, ReceiveFriendsPacket::new),
     UPDATE_SETTINGS_PACKET(5, UpdateSettingsPacket::new),
     UPDATE_FRIEND_PACKET(6, UpdateFriendPacket::new),
-    REQUEST_JUMP_PACKET(7, RequestJumpPacket::new);
+    REQUEST_JUMP_PACKET(7, RequestJumpPacket::new),
+    UPDATE_FAVORITE_PACKET(8, UpdateFavoritePacket::new),
+    REMOVE_FRIEND_PACKET(9, RemoveFriendPacket::new);
 
     @Getter
     private final int id;

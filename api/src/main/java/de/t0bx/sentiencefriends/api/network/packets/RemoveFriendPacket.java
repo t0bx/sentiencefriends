@@ -1,6 +1,5 @@
 package de.t0bx.sentiencefriends.api.network.packets;
 
-import de.t0bx.sentiencefriends.api.data.FriendsData;
 import de.t0bx.sentiencefriends.api.netty.PacketType;
 import de.t0bx.sentiencefriends.api.netty.utils.ByteBufHelper;
 import de.t0bx.sentiencefriends.api.network.FriendsPacket;
@@ -10,14 +9,14 @@ import lombok.Getter;
 import java.util.UUID;
 
 @Getter
-public class UpdateFriendPacket implements FriendsPacket {
+public class RemoveFriendPacket implements FriendsPacket {
 
     private UUID uuid;
-    private FriendsData.Friend friend;
+    private UUID friend;
 
-    public UpdateFriendPacket() {}
+    public RemoveFriendPacket() {}
 
-    public UpdateFriendPacket(UUID uuid, FriendsData.Friend friend) {
+    public RemoveFriendPacket(UUID uuid, UUID friend) {
         this.uuid = uuid;
         this.friend = friend;
     }
@@ -25,17 +24,17 @@ public class UpdateFriendPacket implements FriendsPacket {
     @Override
     public void read(ByteBuf buf) {
         this.uuid = ByteBufHelper.readUUID(buf);
-        this.friend = ByteBufHelper.readFriend(buf);
+        this.friend = ByteBufHelper.readUUID(buf);
     }
 
     @Override
     public void write(ByteBuf buf) {
         ByteBufHelper.writeUUID(buf, uuid);
-        ByteBufHelper.writeFriend(buf, friend);
+        ByteBufHelper.writeUUID(buf, friend);
     }
 
     @Override
     public int getId() {
-        return PacketType.UPDATE_FRIEND_PACKET.getId();
+        return PacketType.REMOVE_FRIEND_PACKET.getId();
     }
 }
