@@ -56,9 +56,10 @@ public class PartyChatCommand implements SimpleCommand {
         }
 
         String message = String.join(" ", Arrays.copyOfRange(args, 0, args.length));
+        player.sendMessage(this.miniMessage.deserialize(this.prefix + "<gray>You » " + message));
         for (UUID uuid : partyData.getMembers()) {
             this.proxyServer.getPlayer(uuid).ifPresent(member -> {
-               member.sendMessage(this.miniMessage.deserialize(this.prefix + message));
+               member.sendMessage(this.miniMessage.deserialize(this.prefix + "<gray>" + player.getUsername() + " » " + message));
             });
         }
     }

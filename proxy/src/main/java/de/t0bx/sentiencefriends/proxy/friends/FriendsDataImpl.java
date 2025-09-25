@@ -2,6 +2,8 @@ package de.t0bx.sentiencefriends.proxy.friends;
 
 import com.velocitypowered.api.proxy.ProxyServer;
 import de.t0bx.sentiencefriends.api.data.FriendsData;
+import de.t0bx.sentiencefriends.api.data.UpdateType;
+import de.t0bx.sentiencefriends.api.network.packets.UpdateFriendPacket;
 import de.t0bx.sentiencefriends.proxy.ProxyPlugin;
 import de.t0bx.sentiencefriends.proxy.database.IMySQLManager;
 import net.kyori.adventure.text.minimessage.MiniMessage;
@@ -43,7 +45,7 @@ public class FriendsDataImpl extends FriendsData {
         this.mySQLManager.updateAsync(insert, uuid.toString(), sender.toString(), friendName, now, now);
         this.mySQLManager.updateAsync(insert, sender.toString(), uuid.toString(), playerName, now, now);
 
-        Friend selfFriend = new Friend(uuid, friendName, now);
+        Friend selfFriend = new Friend(sender, friendName, now);
 
         this.proxyServer.getPlayer(sender).ifPresent(player -> {
             FriendsDataImpl friendsDataImpl = ProxyPlugin.getInstance().getFriendsManager().get(sender);
@@ -56,9 +58,15 @@ public class FriendsDataImpl extends FriendsData {
             friendsDataImpl.getFriends().put(uuid, friend);
             friendsDataImpl.getOutgoingRequests().remove(uuid);
             player.sendMessage(MiniMessage.miniMessage().deserialize(ProxyPlugin.getInstance().getPrefix() + "<green>You are now friends with " + playerName + "."));
+
+            var updateFriendPacket = new UpdateFriendPacket(player.getUniqueId(), UpdateType.ADD, friend);
+            ProxyPlugin.getInstance().getNettyManager().sendPacket(updateFriendPacket);
         });
 
         this.friends.put(sender, selfFriend);
+
+        var updateFriendPacket = new UpdateFriendPacket(uuid, UpdateType.ADD, selfFriend);
+        ProxyPlugin.getInstance().getNettyManager().sendPacket(updateFriendPacket);
     }
 
     public void declineRequest(UUID sender) {
@@ -88,8 +96,13 @@ public class FriendsDataImpl extends FriendsData {
             FriendsDataImpl friendsDataImpl = ProxyPlugin.getInstance().getFriendsManager().get(friend);
             if (friendsDataImpl == null) return;
 
-            friendsDataImpl.getFriends().remove(uuid);
+            Friend friendsData = friendsDataImpl.getFriends().remove(uuid);
+            var updateFriendPacket = new UpdateFriendPacket(player.getUniqueId(), UpdateType.REMOVE, friendsData);
+            ProxyPlugin.getInstance().getNettyManager().sendPacket(updateFriendPacket);
         });
+
+        var updateFriendPacket = new UpdateFriendPacket(uuid, UpdateType.REMOVE, removed);
+        ProxyPlugin.getInstance().getNettyManager().sendPacket(updateFriendPacket);
     }
 
     public void setFavorite(UUID friend, boolean favorite) {
@@ -99,6 +112,9 @@ public class FriendsDataImpl extends FriendsData {
         friendData.setFavorite(favorite);
         String update = "UPDATE friends_data SET favorite = ? WHERE uuid_friend = ? AND uuid_player = ?";
         this.mySQLManager.updateAsync(update, favorite, friend.toString(), uuid.toString());
+
+        var updateFriendPacket = new UpdateFriendPacket(uuid, UpdateType.UPDATE, friendData);
+        ProxyPlugin.getInstance().getNettyManager().sendPacket(updateFriendPacket);
     }
 
     public void changeSetting(SettingType setting, boolean value) {

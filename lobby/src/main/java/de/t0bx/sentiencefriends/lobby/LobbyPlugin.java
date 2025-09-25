@@ -60,6 +60,6 @@ public class LobbyPlugin extends JavaPlugin {
     }
 
     public String getRandomChannelIdentifier() {
-        return "ChannelLobby";
+        return UUID.randomUUID().toString();
     }
 }

@@ -5,21 +5,20 @@ import com.velocitypowered.api.proxy.server.RegisteredServer;
 import de.t0bx.sentiencefriends.proxy.ProxyPlugin;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 
-import java.util.Collection;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class PartyManager {
 
     private final ProxyServer proxyServer;
     private final Map<UUID, PartyData> parties;
+    private final Map<UUID, PartyData> partyMembersMap;
     private final Map<UUID, UUID> pendingInvites;
 
     public PartyManager(ProxyServer proxyServer) {
         this.proxyServer = proxyServer;
         this.parties = new ConcurrentHashMap<>();
+        this.partyMembersMap = new ConcurrentHashMap<>();
         this.pendingInvites = new ConcurrentHashMap<>();
     }
 
@@ -32,6 +31,11 @@ public class PartyManager {
     }
 
     public void deleteParty(UUID leader) {
+        PartyData partyData = this.parties.getOrDefault(leader, null);
+        if (partyData == null) return;
+        partyData.getMembers().forEach(this.partyMembersMap::remove);
+        partyData.getMembers().clear();
+
         this.parties.remove(leader);
     }
 
@@ -44,7 +48,19 @@ public class PartyManager {
     }
 
     public Set<UUID> getPartyMembers(UUID leader) {
-        return this.parties.getOrDefault(leader, null).getMembers();
+        PartyData partyData = this.parties.getOrDefault(leader, null);
+        if (partyData == null) return null;
+
+        return partyData.getMembers();
+    }
+
+    public Set<UUID> getPartyMembersWithLeader(UUID leader) {
+        PartyData partyData = this.parties.getOrDefault(leader, null);
+        if (partyData == null) return null;
+
+        Set<UUID> members = new HashSet<>(partyData.getMembers());
+        members.add(leader);
+        return members;
     }
 
     public void invitePartyMember(UUID leader, UUID member) {
@@ -59,6 +75,7 @@ public class PartyManager {
         if (partyData == null) return;
 
         partyData.getMembers().add(member);
+        this.partyMembersMap.put(member, partyData);
     }
 
     public void declinePartyInvite(UUID member) {
@@ -88,6 +105,7 @@ public class PartyManager {
         if (partyData.getMembers().contains(member)) return;
 
         partyData.getMembers().add(member);
+        this.partyMembersMap.put(member, partyData);
     }
 
     public void removePartyMember(UUID leader, UUID member) {
@@ -95,19 +113,14 @@ public class PartyManager {
         if (partyData == null) return;
 
         partyData.getMembers().remove(member);
+        this.partyMembersMap.remove(member);
     }
 
     public boolean isMemberOfParty(UUID uuid) {
-        return this.parties.values()
-                .stream()
-                .anyMatch(partyData -> partyData.getMembers().contains(uuid));
+        return this.partyMembersMap.containsKey(uuid);
     }
 
     public PartyData getPartyByMember(UUID uuid) {
-        return this.parties.values()
-                .stream()
-                .filter(partyData -> partyData.getMembers().contains(uuid))
-                .findFirst()
-                .orElse(null);
+        return this.partyMembersMap.getOrDefault(uuid, null);
     }
 }

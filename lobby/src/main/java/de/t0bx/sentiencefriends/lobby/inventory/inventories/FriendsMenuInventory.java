@@ -66,7 +66,7 @@ public class FriendsMenuInventory {
         int end = Math.min(start + pageSize, total);
 
         if (total == 0) {
-            inventory.setItem(31, new ItemProvider(Material.BARRIER)
+            inventory.setItem(22, new ItemProvider(Material.BARRIER)
                     .setName("<red>No friends found!")
                     .build());
         } else {

@@ -214,7 +214,7 @@ public class PartyCommand implements SimpleCommand {
                 this.partyManager.acceptPartyInvite(player.getUniqueId());
                 player.sendMessage(this.miniMessage.deserialize(this.prefix + "<green>You have accepted the invite from " + playerName + "."));
 
-                for (UUID uuid : this.partyManager.getPartyMembers(target.getUniqueId())) {
+                for (UUID uuid : this.partyManager.getPartyMembersWithLeader(target.getUniqueId())) {
                     if (uuid.equals(player.getUniqueId())) continue;
 
                     this.proxyServer.getPlayer(uuid).ifPresent(member -> {
@@ -267,7 +267,7 @@ public class PartyCommand implements SimpleCommand {
                 partyData.getMembers().remove(player.getUniqueId());
                 player.sendMessage(this.miniMessage.deserialize(this.prefix + "<green>You have left the party."));
 
-                for (UUID uuid : partyData.getMembers()) {
+                for (UUID uuid : this.partyManager.getPartyMembersWithLeader(partyData.getLeader())) {
                     if (uuid.equals(player.getUniqueId())) continue;
 
                     this.proxyServer.getPlayer(uuid).ifPresent(member -> {
@@ -298,9 +298,9 @@ public class PartyCommand implements SimpleCommand {
                 player.sendMessage(this.miniMessage.deserialize(this.prefix + "<green>You have deleted your party."));
 
                 for (UUID uuid : members) {
-                    if (uuid.equals(player.getUniqueId())) continue;
-
-                    player.sendMessage(this.miniMessage.deserialize(this.prefix + "<red>" + player.getUsername() + " has deleted their party."));
+                    this.proxyServer.getPlayer(uuid).ifPresent(member -> {
+                        member.sendMessage(this.miniMessage.deserialize(this.prefix + "<red>" + player.getUsername() + " has deleted their party."));
+                    });
                 }
             }
 
@@ -320,14 +320,15 @@ public class PartyCommand implements SimpleCommand {
                         ? this.partyManager.getParty(player.getUniqueId())
                         : this.partyManager.getPartyByMember(player.getUniqueId());
 
-                player.sendMessage(this.miniMessage.deserialize(this.prefix + "<green>Party members (" + partyData.getMembers().size() + "):"));
-                player.sendMessage(this.miniMessage.deserialize(this.prefix + "<green>--------------------------------"));
+                player.sendMessage(this.miniMessage.deserialize(this.prefix + "<gray>Party members (<green>" + partyData.getMembers().size() + "<gray>):"));
+                player.sendMessage(this.miniMessage.deserialize(this.prefix + "<gray>--------------------------------"));
 
                 if (isLeader) {
                     player.sendMessage(this.miniMessage.deserialize(this.prefix + "<green>Party Leader: " + player.getUsername()));
                 } else {
                     player.sendMessage(this.miniMessage.deserialize(this.prefix + "<green>Party Leader: " + this.proxyServer.getPlayer(partyData.getLeader()).get().getUsername()));
                 }
+
                 for (UUID uuid : partyData.getMembers()) {
                     this.proxyServer.getPlayer(uuid).ifPresent(member -> {
                        player.sendMessage(this.miniMessage.deserialize(this.prefix + "<green>" + member.getUsername()));
@@ -342,7 +343,7 @@ public class PartyCommand implements SimpleCommand {
                 }
 
                 if (!args[1].equalsIgnoreCase("public") && !args[1].equalsIgnoreCase("private")) {
-                    player.sendMessage(this.miniMessage.deserialize(this.prefix + "<red>Invalid privacy setting."));
+                    player.sendMessage(this.miniMessage.deserialize(this.prefix + "<red>Invalid privacy setting. Valid Types are <b>PUBLIC</b> <red>and <b>PRIVATE</b>"));
                     return;
                 }
 
@@ -368,7 +369,7 @@ public class PartyCommand implements SimpleCommand {
                 }
 
                 if (!args[1].equalsIgnoreCase("on") && !args[1].equalsIgnoreCase("off")) {
-                    player.sendMessage(this.miniMessage.deserialize(this.prefix + "<red>Invalid chat setting."));
+                    player.sendMessage(this.miniMessage.deserialize(this.prefix + "<red>Invalid chat setting. Valid Types are <b>ON</b> <red>and <b>OFF</b>"));
                     return;
                 }
 

@@ -1,3 +1,6 @@
+import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
+import org.gradle.api.tasks.Exec
+
 plugins {
     id("java")
     id("com.gradleup.shadow") version "8.3.8"
@@ -28,9 +31,41 @@ java {
     }
 }
 
-tasks.shadowJar {
+val shadowJarTask = tasks.named<ShadowJar>("shadowJar")
+
+val remoteUser: String? = (findProperty("remoteUser") as String?).takeIf { !it.isNullOrBlank() } ?: System.getenv("REMOTE_USER")
+val remoteHost: String? = (findProperty("remoteHost") as String?).takeIf { !it.isNullOrBlank() } ?: System.getenv("REMOTE_HOST")
+val remotePathLobby: String? = (findProperty("remotePathLobby") as String?).takeIf { !it.isNullOrBlank() } ?: System.getenv("REMOTE_PATH_LOBBY")
+val remoteIdentity: String? = (findProperty("remoteIdentity") as String?).takeIf { !it.isNullOrBlank() } ?: System.getenv("REMOTE_IDENTITY")
+
+fun scpArgsFor(identity: String?) = mutableListOf("scp", "-C", "-o", "StrictHostKeyChecking=no").apply {
+    if (!identity.isNullOrBlank()) addAll(listOf("-i", identity))
+}
+
+val deployLobby by tasks.registering(Exec::class) {
+    dependsOn(shadowJarTask)
+
+    doFirst {
+        if (remoteUser == null || remoteHost == null || remotePathLobby == null) {
+            throw GradleException("Missing remote config for deployLobby: remoteUser, remoteHost and remotePathLobby are required.")
+        }
+
+        val jarFile = shadowJarTask.get().archiveFile.get().asFile
+        if (!jarFile.exists()) throw GradleException("shadowJar output not found: ${jarFile.absolutePath}")
+
+        val scpArgs = scpArgsFor(remoteIdentity)
+        scpArgs += listOf(jarFile.absolutePath, "${remoteUser}@${remoteHost}:${remotePathLobby}")
+
+        logger.lifecycle("Uploading ${jarFile.name} -> ${remoteUser}@${remoteHost}:${remotePathLobby}")
+        commandLine = scpArgs
+    }
+}
+
+tasks.named<ShadowJar>("shadowJar") {
     archiveBaseName.set("SentienceFriends-Lobby")
     archiveVersion.set(project.version.toString())
     archiveClassifier.set("")
     archiveExtension.set("jar")
+
+    finalizedBy(deployLobby)
 }

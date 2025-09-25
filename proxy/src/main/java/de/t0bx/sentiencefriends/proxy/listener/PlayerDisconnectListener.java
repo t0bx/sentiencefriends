@@ -4,6 +4,7 @@ import com.velocitypowered.api.event.Subscribe;
 import com.velocitypowered.api.event.connection.DisconnectEvent;
 import com.velocitypowered.api.proxy.Player;
 import com.velocitypowered.api.proxy.ProxyServer;
+import de.t0bx.sentiencefriends.api.data.UpdateType;
 import de.t0bx.sentiencefriends.api.network.packets.UpdateFriendPacket;
 import de.t0bx.sentiencefriends.proxy.ProxyPlugin;
 import de.t0bx.sentiencefriends.proxy.friends.FriendsDataImpl;
@@ -62,7 +63,7 @@ public class PlayerDisconnectListener {
                     relation.setOnline(false);
                     relation.setLastOnline(lastOnline);
 
-                    var updateFriendPacket = new UpdateFriendPacket(friend.getUniqueId(), relation);
+                    var updateFriendPacket = new UpdateFriendPacket(friend.getUniqueId(), UpdateType.UPDATE, relation);
                     ProxyPlugin.getInstance().getNettyManager().sendPacket(updateFriendPacket);
                 }
 

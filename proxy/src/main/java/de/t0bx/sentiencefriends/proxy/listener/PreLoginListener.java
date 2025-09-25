@@ -3,6 +3,7 @@ package de.t0bx.sentiencefriends.proxy.listener;
 import com.velocitypowered.api.event.Subscribe;
 import com.velocitypowered.api.event.connection.PreLoginEvent;
 import com.velocitypowered.api.proxy.ProxyServer;
+import de.t0bx.sentiencefriends.api.data.UpdateType;
 import de.t0bx.sentiencefriends.api.network.packets.ReceiveFriendsPacket;
 import de.t0bx.sentiencefriends.api.network.packets.UpdateFriendPacket;
 import de.t0bx.sentiencefriends.proxy.ProxyPlugin;
@@ -69,7 +70,7 @@ public class PreLoginListener {
                                 relation.setCachedName(name);
                                 relation.setOnline(true);
 
-                                var updateFriendPacket = new UpdateFriendPacket(player.getUniqueId(), relation);
+                                var updateFriendPacket = new UpdateFriendPacket(player.getUniqueId(), UpdateType.UPDATE, relation);
                                 ProxyPlugin.getInstance().getNettyManager().sendPacket(updateFriendPacket);
                             }
 
